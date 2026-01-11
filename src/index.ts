@@ -114,35 +114,25 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
             const lines = filteredResults.map((data: QuotaData) => {
                 const paddedName = data.providerName.padEnd(maxLabelLen);
                 const label = `[${paddedName}]`;
-                let line = "";
 
                 if (data.limit !== null && data.limit > 0) {
-                    line = renderQuotaBar(data.used, data.limit, {
+                    return renderQuotaBar(data.used, data.limit, {
                         label,
                         unit: data.unit,
                         details: data.details,
                         config: defaultConfig.progressBar,
                     });
                 } else {
-                    line = (
+                    return (
                         label +
                         `: ${data.used} ${data.unit} (Unlimited)` +
                         (data.details ? ` | ${data.details}` : "")
                     );
                 }
-                
-                // Strip ANSI codes for Toast display
-                return line.replace(/\x1b\[[0-9;]*m/g, "");
             });
 
-            // Show toast instead of appending to text
-            client.tui.showToast({
-                body: {
-                    title: "System Quotas",
-                    message: lines.join("\n"),
-                    variant: "info",
-                },
-            });
+            // Append to message text
+            output.text += "\n\n" + lines.join("\n");
         },
     };
 
