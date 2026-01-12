@@ -1,0 +1,39 @@
+{
+  "name": "opencode-quotas",
+  "version": "0.0.1",
+  "description": "Opencode quota hub plugin for Antigravity and Codex",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "packageManager": "bun@1.1.20",
+  "bin": {
+    "opencode-quotas": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@ai-sdk/provider": "^3.0.2",
+    "@opencode-ai/plugin": "^1.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3"
+  }
+}

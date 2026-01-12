@@ -1,0 +1,32 @@
+{
+  "models": {
+    "gemini-2.5-flash": {
+      "displayName": "Gemini 2.5 Flash",
+      "quotaInfo": {
+        "remainingFraction": 1,
+        "resetTime": "2026-01-11T22:26:05Z"
+      }
+    },
+    "gemini-3-flash": {
+      "displayName": "Gemini 3 Flash",
+      "quotaInfo": {
+        "remainingFraction": 0.41,
+        "resetTime": "2026-01-11T20:27:54Z"
+      }
+    },
+    "gemini-3-pro-low": {
+      "displayName": "Gemini 3 Pro (Low)",
+      "quotaInfo": {
+        "remainingFraction": 0.909,
+        "resetTime": "2026-01-11T20:52:15Z"
+      }
+    },
+    "claude-sonnet-4-5-thinking": {
+      "displayName": "Claude Sonnet 4.5 (Thinking)",
+      "quotaInfo": {
+        "remainingFraction": 0,
+        "resetTime": "2026-01-13T07:27:43Z"
+      }
+    }
+  }
+}

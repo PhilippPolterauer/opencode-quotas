@@ -1,0 +1,37 @@
+{
+  "plan_type": "team",
+  "rate_limit": {
+    "allowed": false,
+    "limit_reached": true,
+    "primary_window": {
+      "used_percent": 23,
+      "limit_window_seconds": 18000,
+      "reset_after_seconds": 2422,
+      "reset_at": 1768154357
+    },
+    "secondary_window": {
+      "used_percent": 100,
+      "limit_window_seconds": 604800,
+      "reset_after_seconds": 231266,
+      "reset_at": 1768383201
+    }
+  },
+  "code_review_rate_limit": {
+    "allowed": true,
+    "limit_reached": false,
+    "primary_window": {
+      "used_percent": 0,
+      "limit_window_seconds": 604800,
+      "reset_after_seconds": 604800,
+      "reset_at": 1768756736
+    },
+    "secondary_window": null
+  },
+  "credits": {
+    "has_credits": false,
+    "unlimited": false,
+    "balance": null,
+    "approx_local_messages": null,
+    "approx_cloud_messages": null
+  }
+}
