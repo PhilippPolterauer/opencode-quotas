@@ -45,7 +45,8 @@ export type QuotaColumn =
   | "reset" 
   | "window" 
   | "info"
-  | "status";
+  | "status"
+  | "ettl";
 
 export interface QuotaConfig {
   displayMode: QuotaDisplayMode;

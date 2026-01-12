@@ -7,7 +7,18 @@ type RenderedQuotaLine = {
     line: string;
 };
 
-const DEFAULT_COLUMNS: QuotaColumn[] = ["status", "name", "bar", "percent", "reset"];
+const DEFAULT_COLUMNS: QuotaColumn[] = ["status", "name", "percent", "bar", "reset", "ettl"];
+const HEADERS: Record<QuotaColumn, string> = {
+    name: "QUOTA NAME",
+    bar: "UTILIZATION",
+    percent: "USED",
+    value: "VALUE",
+    reset: "RESET",
+    ettl: "ETTL",
+    window: "WINDOW",
+    info: "INFO",
+    status: "ST"
+};
 
 export function renderQuotaTable(
     quotas: QuotaData[],
@@ -39,46 +50,87 @@ export function renderQuotaTable(
             barParts,
             cells: {
                 name: quota.providerName,
-                // If unlimited, we might want a special placeholder for bar/percent or just empty?
-                // The original code printed "(Unlimited)" instead of value part.
                 bar: barParts ? barParts.bar : (isUnlimited ? "Unlimited" : ""),
                 percent: barParts ? barParts.percent : "",
                 value: barParts ? barParts.valuePart : `${quota.used} ${quota.unit}`,
-                reset: quota.predictedReset || quota.reset || "",
+                reset: quota.reset?.replace(/^in /, "") || "", // Strip "in " if present
+                ettl: quota.predictedReset?.replace(/\(predicted\)/, "").trim() || "-",
                 window: quota.window || "",
                 info: quota.info || "",
-                status: barParts ? barParts.statusEmoji : "⚪",
+                status: barParts ? barParts.statusText : (quota.info === "unlimited" ? "OK " : "UNK"),
             } as Record<QuotaColumn, string>
         };
     });
 
     // 2. Measure widths
     const widths: Record<QuotaColumn, number> = {
-        name: 0, bar: 0, percent: 0, value: 0, reset: 0, window: 0, info: 0, status: 0
+        name: 0, bar: 0, percent: 0, value: 0, reset: 0, window: 0, info: 0, status: 0, ettl: 0
     };
+
+    // Calculate max widths including headers
+    for (const col of columns) {
+        widths[col] = Math.max(widths[col], HEADERS[col].length);
+    }
 
     for (const row of rows) {
         for (const col of columns) {
-            // ANSI escape codes in `bar` mess up length calculation for padding.
-            // We need visible length. 
-            // `bar` has ansi codes. `status` is just emoji (len 1 or 2).
-            // `percent`, `value`, `reset`, `window`, `info` are plain text.
-            // `name` is plain text.
-            
-            // Simple heuristic: strip ansi for measurement if needed, but `bar` is fixed width mostly.
-            // However, `bar` contains ANSI codes which `length` counts.
-            // We should use a regex to strip ansi for width calculation.
             const content = row.cells[col];
             const visibleLength = content.replace(/\x1b\[[0-9;]*m/g, "").length;
-            
             if (visibleLength > widths[col]) {
                 widths[col] = visibleLength;
             }
         }
     }
 
-    // 3. Render lines
-    return rows.map((row) => {
+    const outputRows: RenderedQuotaLine[] = [];
+
+    // 3. Render Header
+    const headerSegments: string[] = [];
+    const separatorSegments: string[] = [];
+
+    for (const col of columns) {
+        const width = widths[col];
+        const headerTitle = HEADERS[col];
+        // Alignments: same as content
+        // percent: right
+        // others: left
+        
+        let segment = "";
+        let sep = "";
+        
+        if (col === "percent") {
+            segment = headerTitle.padStart(width);
+        } else {
+            segment = headerTitle.padEnd(width);
+        }
+        
+        // Separator logic
+        // status: 3 chars -> "---" or "───"
+        // name: "-------------------"
+        // bar: "--------------------"
+        // Use "─" for consistency with user request (they used "─" for ST and "-" for others, or mixed?
+        // User example:
+        // ST   QUOTA NAME
+        // ───  -------------------
+        // ST uses "───", Name uses "---".
+        // Let's try to match that or just use "-" for all.
+        // The user explicitly used `───` for ST. I'll use `-` for others as in their example.
+        
+        if (col === "status") {
+            sep = "─".repeat(width);
+        } else {
+            sep = "-".repeat(width);
+        }
+
+        headerSegments.push(segment);
+        separatorSegments.push(sep);
+    }
+
+    outputRows.push({ id: "header", providerName: "header", line: headerSegments.join("   ") });
+    outputRows.push({ id: "sep", providerName: "sep", line: separatorSegments.join("   ") });
+
+    // 4. Render lines
+    rows.forEach((row) => {
         const segments: string[] = [];
         
         for (let i = 0; i < columns.length; i++) {
@@ -86,36 +138,25 @@ export function renderQuotaTable(
             const content = row.cells[col];
             const width = widths[col];
             
-            // Alignments:
-            // name: left
-            // bar: left (but is fixed width usually)
-            // percent: right
-            // value: left (usually) or right? Original code had right pad for valuePart but maybe left align.
-            // reset/window/info: left
-            
             let segment = "";
             const visibleLength = content.replace(/\x1b\[[0-9;]*m/g, "").length;
             const padding = Math.max(0, width - visibleLength);
 
             if (col === "percent") {
                 segment = " ".repeat(padding) + content;
-            } else if (col === "name") {
-                // Add a colon if it's the name column
-                segment = content + " ".repeat(padding) + ":";
             } else {
                 segment = content + " ".repeat(padding);
             }
             
-            // Add to line
-            if (segment.trim().length > 0 || visibleLength > 0) {
-                 segments.push(segment);
-            }
+            segments.push(segment);
         }
 
-        return {
+        outputRows.push({
             id: row.quota.id,
             providerName: row.quota.providerName,
-            line: segments.join(" "),
-        };
+            line: segments.join("   "), // Use 3 spaces separator as in example
+        });
     });
+
+    return outputRows;
 }

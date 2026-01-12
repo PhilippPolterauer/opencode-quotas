@@ -1,8 +1,8 @@
 import { type AnsiColor, type ProgressBarConfig } from "../interfaces";
 
-const DEFAULT_BAR_WIDTH = 24;
-const DEFAULT_FILLED_CHAR = "▰";
-const DEFAULT_EMPTY_CHAR = "▱";
+const DEFAULT_BAR_WIDTH = 20;
+const DEFAULT_FILLED_CHAR = "█";
+const DEFAULT_EMPTY_CHAR = "░";
 
 const ANSI_CODES: Record<AnsiColor, string> = {
   red: "\x1b[31m",
@@ -49,6 +49,7 @@ export type RenderQuotaBarParts = {
   valuePart: string;
   detailsPart: string;
   statusEmoji: string;
+  statusText: string;
 };
 
 export function getQuotaStatusEmoji(
@@ -73,6 +74,31 @@ export function getQuotaStatusEmoji(
     case "yellow": return "🟡";
     case "red": return "🔴";
     default: return "⚪"; // Grey/Unknown
+  }
+}
+
+export function getQuotaStatusText(
+  ratio: number,
+  config: ProgressBarConfig = {}
+): string {
+  // Default thresholds if not provided
+  const gradients = config.gradients || [
+    { threshold: 0.5, color: "green" },
+    { threshold: 0.8, color: "yellow" },
+    { threshold: 1.0, color: "red" },
+  ];
+
+  const sorted = [...gradients].sort((a, b) => a.threshold - b.threshold);
+  
+  // Find the matching level
+  const match = sorted.find((g) => ratio <= g.threshold);
+  const color = match ? match.color : sorted[sorted.length - 1]?.color || "red";
+
+  switch (color) {
+    case "green": return "OK "; // Space for alignment
+    case "yellow": return "WRN";
+    case "red": return "ERR";
+    default: return "UNK";
   }
 }
 
@@ -143,6 +169,7 @@ export function renderQuotaBarParts(
 
   // Determine Emoji
   const statusEmoji = getQuotaStatusEmoji(ratio, config);
+  const statusText = getQuotaStatusText(ratio, config);
 
   return {
     labelPart,
@@ -151,6 +178,7 @@ export function renderQuotaBarParts(
     valuePart: `(${valueText})`,
     detailsPart: options.details ? ` | ${options.details}` : "",
     statusEmoji,
+    statusText,
   };
 }
 

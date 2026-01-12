@@ -8,8 +8,8 @@ describe("Progress Bar Rendering", () => {
       unit: "%",
     });
 
-    // Default width is 24, so 50% is 12 chars.
-    expect(parts.bar).toContain("▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱");
+    // Default width is 20, so 50% is 10 chars.
+    expect(parts.bar).toContain("██████████░░░░░░░░░░");
     expect(parts.percent).toContain("50%");
     expect(parts.valuePart).toContain("(50/100 %)");
     expect(parts.labelPart).toContain("Test:");
@@ -22,7 +22,7 @@ describe("Progress Bar Rendering", () => {
       config: { width: 10 },
     });
 
-    expect(parts.bar).toContain("▰▰▰▰▰▱▱▱▱▱");
+    expect(parts.bar).toContain("█████░░░░░");
     expect(parts.percent).toContain("50%");
   });
 
@@ -33,7 +33,8 @@ describe("Progress Bar Rendering", () => {
     });
 
     // Should be all empty chars
-    expect(parts.bar).toContain("▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱");
+    // Default width 20
+    expect(parts.bar).toContain("░".repeat(20));
     expect(parts.percent).toBe("n/a");
     expect(parts.valuePart).toContain("(10/0 items)");
   });
@@ -47,6 +48,8 @@ describe("Progress Bar Rendering", () => {
         { threshold: 1.0, color: "red" as const },
       ],
       color: true,
+      filledChar: "█",
+      emptyChar: "░",
     };
 
     const green = renderQuotaBarParts(30, 100, { label: "G", unit: "U", config });
@@ -69,7 +72,7 @@ describe("Progress Bar Rendering", () => {
     });
 
     // 100 - 30 = 70 available. 70% of 10 chars is 7.
-    expect(parts.bar).toContain("▰▰▰▰▰▰▰▱▱▱");
+    expect(parts.bar).toContain("███████░░░");
     expect(parts.percent).toContain("70%");
     expect(parts.valuePart).toContain("(70/100 GB)");
   });

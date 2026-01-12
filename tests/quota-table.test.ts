@@ -29,18 +29,28 @@ describe("Quota Table Rendering", () => {
             tableConfig: { columns: ["name", "reset", "info"] }
         });
         
-        // "Longer Name" is 11 chars.
-        // "Short" is 5 chars.
-        // "Short" should be padded to 11.
+        // rows[0] is header
+        // rows[1] is separator
+        // rows[2] is data 1
+        // rows[3] is data 2
         
-        const row1 = rows[0].line;
-        const row2 = rows[1].line;
+        expect(rows.length).toBe(4);
+        
+        const row1 = rows[2].line;
+        const row2 = rows[3].line;
 
-        // name + ":" + " " + reset + " " + info
-        expect(row1).toContain("Short      :");
-        expect(row1).toContain("in 1h      ");
-        expect(row2).toContain("Longer Name:");
-        expect(row2).toContain("in 22h 30m ");
+        // name (padding) + reset (padding) + info
+        // "Longer Name" is 11 chars. "QUOTA NAME" is 10 chars. Max 11.
+        // "Short" becomes "Short      " (11 chars).
+        
+        expect(row1).toContain("Short      ");
+        expect(row1).not.toContain("Short      :"); // No colon
+        // RESET width is 7 ("22h 30m"). "1h" is 2 chars. Padding 5.
+        // So "1h     ".
+        expect(row1).toContain("1h     "); 
+        
+        expect(row2).toContain("Longer Name");
+        expect(row2).toContain("22h 30m");
     });
 
     test("handles optional columns", () => {
@@ -66,9 +76,11 @@ describe("Quota Table Rendering", () => {
             tableConfig: { columns: ["name", "window"] }
         });
         
-        expect(rows[0].line).toContain("5h");
-        expect(rows[0].line).toContain("A:");
-        expect(rows[1].line.trim()).toBe("B:"); // window is empty for B
+        // rows[2] is first data row
+        expect(rows[2].line).toContain("5h");
+        expect(rows[2].line).toContain("A");
+        // B has empty window, so it should be just spaces or end of line
+        expect(rows[3].line).toContain("B");
     });
 
     test("aligns unlimited quotas", () => {
@@ -95,8 +107,32 @@ describe("Quota Table Rendering", () => {
             tableConfig: { columns: ["name", "bar", "reset"] }
         });
         
-        expect(rows[1].line).toContain("Unlimited");
-        expect(rows[1].line).not.toContain("[Unlimited]");
-        expect(rows[1].line).toContain("never");
+        // rows[3] is second data row
+        expect(rows[3].line).toContain("Unlimited");
+        expect(rows[3].line).not.toContain("[Unlimited]");
+        // "never" is kept as is because it doesn't start with "in "
+        expect(rows[3].line).toContain("never");
+    });
+    
+    test("renders ETTL column", () => {
+         const quotas: QuotaData[] = [
+            {
+                id: "1",
+                providerName: "P1",
+                used: 50,
+                limit: 100,
+                unit: "%",
+                reset: "in 1h",
+                predictedReset: "in 30m (predicted)"
+            },
+        ];
+        
+        const rows = renderQuotaTable(quotas, {
+            tableConfig: { columns: ["name", "reset", "ettl"] }
+        });
+        
+        expect(rows[0].line).toContain("ETTL"); // Header
+        expect(rows[2].line).toContain("30m"); // Value stripped
+        expect(rows[2].line).not.toContain("(predicted)");
     });
 });
