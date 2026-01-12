@@ -1,4 +1,4 @@
-import { type IQuotaProvider, type QuotaData } from "./interfaces";
+import { type IQuotaProvider, type QuotaData, type IHistoryService } from "./interfaces";
 
 type CachedQuotas = {
     data: QuotaData[];
@@ -8,6 +8,7 @@ type CachedQuotas = {
 
 type QuotaCacheOptions = {
     refreshIntervalMs: number;
+    historyService?: IHistoryService;
 };
 
 const DEFAULT_OPTIONS: QuotaCacheOptions = {
@@ -77,6 +78,10 @@ export class QuotaCache {
                     fetchedAt: new Date(),
                     lastError: null,
                 };
+
+                if (this.options.historyService) {
+                    void this.options.historyService.append(this.state.data);
+                }
             } catch (e) {
                 this.state = {
                     ...this.state,

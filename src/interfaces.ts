@@ -11,6 +11,11 @@ export interface QuotaData {
   reset?: string;
   
   /**
+   * Predicted time until limit is reached (e.g. "in 12m (predicted)").
+   */
+  predictedReset?: string;
+  
+  /**
    * Window or period description (e.g. "5h window" or "Monthly").
    */
   window?: string;
@@ -75,6 +80,42 @@ export interface QuotaConfig {
    * Enable debug logging to ~/.local/share/opencode/quotas-debug.log
    */
   debug?: boolean;
+  /**
+   * Optional aggregation groups.
+   */
+  aggregatedGroups?: AggregatedGroup[];
+  /**
+   * Max history age in hours. Defaults to 24.
+   */
+  historyMaxAgeHours?: number;
+}
+
+export type AggregationStrategy = 
+  | "most_critical" // Predicted time-to-limit (requires history)
+  | "min"           // Lowest percentage used
+  | "max"           // Highest percentage used
+  | "mean"          // Average percentage used
+  | "median";       // Median percentage used
+
+export interface AggregatedGroup {
+    id: string;              // Unique ID for the smart group (e.g. "codex-smart")
+    name: string;            // Display name (e.g. "Codex Usage")
+    sources: string[];       // IDs of quotas to track (e.g. ["codex-primary", "codex-secondary"])
+    strategy?: AggregationStrategy; // Defaults to "most_critical"
+    predictionWindowMinutes?: number; // Time window for regression (default: 60)
+}
+
+export interface HistoryPoint {
+    timestamp: number;
+    used: number;
+    limit: number | null;
+}
+
+export interface IHistoryService {
+    init(): Promise<void>;
+    append(snapshot: QuotaData[]): Promise<void>;
+    getHistory(quotaId: string, windowMs: number): HistoryPoint[];
+    setMaxAge(hours: number): void;
 }
 
 export interface IQuotaProvider {

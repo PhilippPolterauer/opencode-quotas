@@ -98,6 +98,14 @@ graph TD
 
 ---
 
+## 🔒 Concurrency & Safety
+
+- **Duplicate Injection**: The plugin MUST ensure quota blocks are injected exactly once per message, regardless of concurrency levels, retries, or parallel session execution.
+- **Race Conditions**: Use robust locking mechanisms (e.g., `processedMessages` sets and `processingLocks` maps) to prevent race conditions when multiple hooks process the same message ID.
+- **Output Validation**: Before injecting, always verify if the target output text already contains the injection (e.g., check for footer signatures) to handle cases where state might be isolated or cleared.
+
+---
+
 ## 🧪 Testing Patterns
 
 Tests are located alongside the source or in a dedicated `tests/` directory (if applicable).
@@ -145,6 +153,7 @@ To add a new quota provider (e.g., "GitHub"):
 ## 🤖 AI Instructions
 
 - **Documentation Mandate**: Whenever you modify the plugin's architecture, add a new provider, or change configuration options, you **MUST** update `DESIGN.md` (for architectural changes) and `README.md` (for user-facing features/usage) in the same task.
+- **Changelog**: Keep `CHANGELOG.md` updated. Add any changes, fixes, or additions to the `[Unreleased]` section.
 - **Bun Usage**: Always use `bun test` and `bun install`.
 - **Refactoring**: Maintain the factory pattern in `src/providers/`.
 - **Dependencies**: Check `package.json` before adding new libs. Prefer Bun/Node built-ins.

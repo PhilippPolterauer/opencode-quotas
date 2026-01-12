@@ -34,6 +34,12 @@ export interface CloudAuthCredentials {
   email: string;
 }
 
+interface CachedCredential extends CloudAuthCredentials {
+  expiresAt: number;
+}
+
+let cachedCredential: CachedCredential | null = null;
+
 function getAccountsFilePath(): string {
   return join(homedir(), ".config", "opencode", "antigravity-accounts.json");
 }
@@ -70,7 +76,7 @@ export async function hasCloudCredentials(): Promise<boolean> {
   }
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<string> {
+async function refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: number }> {
   const response = await fetch(TOKEN_URL, {
     method: "POST",
     headers: {
@@ -95,7 +101,10 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
   }
 
   const data = (await response.json()) as TokenResponse;
-  return data.access_token;
+  return {
+    accessToken: data.access_token,
+    expiresAt: Date.now() + data.expires_in * 1000,
+  };
 }
 
 export async function getCloudCredentials(): Promise<CloudAuthCredentials> {
@@ -107,7 +116,28 @@ export async function getCloudCredentials(): Promise<CloudAuthCredentials> {
     throw new Error("No active account found in antigravity-accounts.json");
   }
 
-  const accessToken = await refreshAccessToken(activeAccount.refreshToken);
+  // Check cache (5 min buffer)
+  const fiveMinutesInMs = 5 * 60 * 1000;
+  if (
+    cachedCredential &&
+    cachedCredential.email === activeAccount.email &&
+    cachedCredential.expiresAt > Date.now() + fiveMinutesInMs
+  ) {
+    return {
+      accessToken: cachedCredential.accessToken,
+      projectId: cachedCredential.projectId,
+      email: cachedCredential.email,
+    };
+  }
+
+  const { accessToken, expiresAt } = await refreshAccessToken(activeAccount.refreshToken);
+  
+  cachedCredential = {
+    accessToken,
+    projectId: activeAccount.projectId,
+    email: activeAccount.email,
+    expiresAt,
+  };
 
   return {
     accessToken,

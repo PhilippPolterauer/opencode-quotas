@@ -44,7 +44,7 @@ export function renderQuotaTable(
                 bar: barParts ? barParts.bar : (isUnlimited ? "Unlimited" : ""),
                 percent: barParts ? barParts.percent : "",
                 value: barParts ? barParts.valuePart : `${quota.used} ${quota.unit}`,
-                reset: quota.reset || "",
+                reset: quota.predictedReset || quota.reset || "",
                 window: quota.window || "",
                 info: quota.info || "",
                 status: barParts ? barParts.statusEmoji : "⚪",

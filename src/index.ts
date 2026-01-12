@@ -1,16 +1,18 @@
 import { type Plugin, type Hooks } from "@opencode-ai/plugin";
 import { type AssistantMessage } from "@opencode-ai/sdk";
-import { getQuotaRegistry } from "./registry";
-import { createAntigravityProvider } from "./providers/antigravity";
-import { createCodexProvider } from "./providers/codex";
+import { QuotaService } from "./services/quota-service";
+import { HistoryService } from "./services/history-service";
 import { renderQuotaTable } from "./ui/quota-table";
 import { type QuotaData } from "./interfaces";
-import { DEFAULT_CONFIG } from "./defaults";
 import { QuotaCache } from "./quota-cache";
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { inspect } from "node:util";
+
+// Global deduplication state to prevent double injection across plugin instances
+const processedMessages = new Set<string>();
+const processingLocks = new Map<string, Promise<void>>();
 
 // Helper for debugging
 function logToDebugFile(msg: string, data: any, enabled: boolean) {
@@ -29,67 +31,39 @@ function logToDebugFile(msg: string, data: any, enabled: boolean) {
  * QuotaHub Plugin for OpenCode.ai
  */
 export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
-    // Start with the default configuration
-    const config = { ...DEFAULT_CONFIG };
-    // Deep clone specific nested objects to avoid mutation of the constant
-    if (DEFAULT_CONFIG.progressBar) {
-        config.progressBar = { ...DEFAULT_CONFIG.progressBar };
-    }
-    if (DEFAULT_CONFIG.groups) {
-        config.groups = { ...DEFAULT_CONFIG.groups };
-    }
+    const historyService = new HistoryService();
+    // Do not await init here to avoid blocking plugin startup
+    // await historyService.init();
 
-    // Attempt to load .opencode/quotas.json from the project directory
-    try {
-        const configPath = join(directory, ".opencode", "quotas.json");
-        const rawConfig = readFileSync(configPath, "utf-8");
-        const userConfig = JSON.parse(rawConfig);
-        
-        // Merge user config
-        if (userConfig.debug !== undefined) {
-            config.debug = userConfig.debug;
-        }
-        if (userConfig.footer !== undefined) {
-            config.footer = userConfig.footer;
-        }
-        if (userConfig.progressBar && userConfig.progressBar.color !== undefined) {
-             if (!config.progressBar) config.progressBar = {};
-             config.progressBar.color = userConfig.progressBar.color;
-        }
-        if (userConfig.table) {
-            config.table = userConfig.table;
-        }
-        // Merge other fields if necessary
-    } catch (e) {
-        // Ignore missing config or parse errors
-    }
+    const quotaService = new QuotaService();
+    // await quotaService.init(directory, historyService);
 
+    // Initial config (defaults)
+    let config = quotaService.getConfig();
     const debugLog = (msg: string, data?: any) => logToDebugFile(msg, data, !!config.debug);
 
-    const registry = getQuotaRegistry();
-    const processedMessages = new Set<string>();
-    const processingLocks = new Map<string, Promise<void>>();
+    let quotaCache: QuotaCache | undefined;
 
-    // Register Antigravity Provider with user-defined or default groups
-    try {
-        const agGroups = config.groups?.antigravity;
-        registry.register(createAntigravityProvider(agGroups));
-    } catch (e) {
-        console.warn("[QuotaHub] Failed to initialize Antigravity provider:", e);
-    }
-
-    // Register Codex Provider
-    try {
-        registry.register(createCodexProvider());
-    } catch (e) {
-        console.warn("[QuotaHub] Failed to initialize Codex provider:", e);
-    }
-
-    const providers = registry.getAll();
-    const quotaCache = new QuotaCache(providers, {
-        refreshIntervalMs: 60_000,
-    });
-    quotaCache.start();
+    // Background initialization
+    const initPromise = (async () => {
+        try {
+            await historyService.init();
+            await quotaService.init(directory, historyService);
+            
+            // Refresh config after init
+            config = quotaService.getConfig();
+            
+            const providers = quotaService.getProviders();
+            quotaCache = new QuotaCache(providers, {
+                refreshIntervalMs: 60_000,
+                historyService,
+            });
+            quotaCache.start();
+            debugLog("init:complete");
+        } catch (e) {
+            console.error("Failed to initialize QuotaHubPlugin:", e);
+        }
+    })();
 
     const hooks: Hooks = {
         /**
@@ -106,6 +80,13 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 text: string;
             },
         ): Promise<void> => {
+            // Ensure initialization is complete before processing
+            if (!quotaCache) {
+                await initPromise;
+            }
+            if (!quotaCache) return;
+            const cache = quotaCache; // Capture valid reference
+
             if (config.footer === false) return;
             
             // Log hook invocation
@@ -116,12 +97,24 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
 
             // Fast path check
             if (processedMessages.has(input.messageID)) return;
+            
+            // Secondary safeguard: check if footer already present
+            if (output.text.includes("**Opencode Quotas")) {
+                 debugLog("skip:footer_present", { messageID: input.messageID });
+                 processedMessages.add(input.messageID);
+                 return;
+            }
 
             // Wait for any existing processing to finish
             while (processingLocks.has(input.messageID)) {
                 await processingLocks.get(input.messageID);
                 // After waking up, check if another process handled it
                 if (processedMessages.has(input.messageID)) return;
+                // Double-check text content in case another process injected it
+                if (output.text.includes("**Opencode Quotas")) {
+                    processedMessages.add(input.messageID);
+                    return;
+                }
             }
 
             // Create a processing task
@@ -135,6 +128,7 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 });
 
                 if (!result || result.info.role !== "assistant") {
+                    processedMessages.add(input.messageID);
                     return;
                 }
 
@@ -153,6 +147,7 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 // Skip if it's a subagent mode (thinking step)
                 if (assistantMsg.mode === "subagent") {
                     debugLog("skip:subagent");
+                    processedMessages.add(input.messageID);
                     return;
                 }
 
@@ -162,6 +157,7 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                     (assistantMsg as any).type === "reasoning"
                 ) {
                     debugLog("skip:reasoning_mode");
+                    processedMessages.add(input.messageID);
                     return;
                 }
 
@@ -174,6 +170,7 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                         assistantMsg.tokens.output === assistantMsg.tokens.reasoning)
                 ) {
                     debugLog("skip:reasoning_tokens", assistantMsg.tokens);
+                    processedMessages.add(input.messageID);
                     return;
                 }
                 
@@ -181,50 +178,24 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 // that might not be tagged correctly in metadata.
                 if (output.text.trim().match(/^Thinking:/i)) {
                     debugLog("skip:thinking_text_heuristic");
+                    processedMessages.add(input.messageID);
                     return;
                 }
 
                 // Mark as processed to prevent double-printing
                 processedMessages.add(input.messageID);
 
-                const snapshot = quotaCache.getSnapshot();
-                const flatResults: QuotaData[] = snapshot.data;
-                if (flatResults.length === 0) return;
+                const snapshot = cache.getSnapshot();
+                const rawResults: QuotaData[] = snapshot.data;
+                if (rawResults.length === 0) return;
 
-                // Filter out disabled quotas
-                const disabledIds = new Set(config.disabled || []);
-                let filteredResults = flatResults.filter(
-                    (data) => !disabledIds.has(data.id),
-                );
-
-                // Filter by model mapping if available
-                const currentModelKey = `${assistantMsg.providerID}:${assistantMsg.modelID}`;
-                
-                debugLog("filtering:model", { currentModelKey });
-
-                if (config.modelMapping && config.modelMapping[currentModelKey]) {
-                    const relevantIds = new Set(config.modelMapping[currentModelKey]);
-                    filteredResults = filteredResults.filter(data => relevantIds.has(data.id));
-                    debugLog("filtering:applied", { count: filteredResults.length });
-                } else if (config.modelMapping) {
-                     // Fallback: match by provider ID
-                     const providerLower = assistantMsg.providerID.toLowerCase();
-                     const matchesProvider = filteredResults.filter(q => 
-                        q.providerName.toLowerCase().includes(providerLower)
-                     );
-                     
-                     if (matchesProvider.length > 0) {
-                         filteredResults = matchesProvider;
-                         debugLog("filtering:provider_fallback", { count: filteredResults.length });
-                     }
-                }
+                // Process (filter, sort) using the shared service
+                const filteredResults = quotaService.processQuotas(rawResults, {
+                    providerId: assistantMsg.providerID,
+                    modelId: assistantMsg.modelID,
+                });
 
                 if (filteredResults.length === 0) return;
-
-                // Sort results by provider name for a stable UI
-                filteredResults.sort((a, b) =>
-                    a.providerName.localeCompare(b.providerName),
-                );
 
                 const lines = renderQuotaTable(filteredResults, {
                     progressBarConfig: config.progressBar,
@@ -235,6 +206,10 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 const showMode = config.progressBar?.show ?? "used";
                 const modeLabel = showMode === "available" ? "(Remaining)" : "(Used)";
                 const footerHeader = `**Opencode Quotas ${modeLabel}**`;
+                
+                // Final safety check before modification
+                if (output.text.includes("**Opencode Quotas")) return;
+
                 const quotedLines = lines;
                 
                 output.text += "\n\n" + `${footerHeader}\n` + quotedLines.join("\n");
@@ -265,3 +240,4 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
 
     return hooks;
 };
+

@@ -16,6 +16,8 @@
  OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+import { formatRelativeTime } from "../utils/time";
+
 export interface QuotaInfo {
   remainingFraction: number;
   resetTime?: string;
@@ -27,28 +29,7 @@ export interface ModelConfig {
   quotaInfo?: QuotaInfo;
 }
 
-export function formatRelativeTime(targetDate: Date): string {
-  const now = new Date();
-  const diffMs = targetDate.getTime() - now.getTime();
-  if (diffMs <= 0) return "now";
-
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMins / 60);
-  const remainingMins = diffMins % 60;
-
-  if (diffHours > 0) {
-    return `${diffHours}h ${remainingMins}m`;
-  }
-  return `${diffMins}m`;
-}
-
-export function formatAbsoluteTime(targetDate: Date): string {
-  return targetDate.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
+export { formatRelativeTime };
 export {
   loadConfig,
   DEFAULT_CONFIG,

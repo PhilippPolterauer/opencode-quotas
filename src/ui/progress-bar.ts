@@ -154,16 +154,3 @@ export function renderQuotaBarParts(
   };
 }
 
-export function renderQuotaBar(
-  used: number,
-  limit: number,
-  options: {
-    label: string;
-    unit: string;
-    details?: string;
-    config?: ProgressBarConfig;
-  },
-): string {
-  const parts = renderQuotaBarParts(used, limit, options);
-  return `${parts.labelPart}${parts.bar} ${parts.percent} ${parts.valuePart}${parts.detailsPart}`;
-}

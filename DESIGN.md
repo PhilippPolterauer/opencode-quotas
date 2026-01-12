@@ -11,7 +11,9 @@ This document outlines the requirements and architectural design for the `openco
 - **On-Demand Command**: Provide a `/quotas` command to display detailed quota information in a message bubble.
 - **Visual Representation**: Display percentage-based quotas using ASCII progress bars with ANSI color gradients.
 - **Dynamic Grouping**: Allow user-defined grouping of granular metrics (e.g., grouping various Google models into "Flash" or "Pro" tiers).
-- **Consolidated Views**: Automatically pick the most restrictive metric when multiple windows exist (e.g., Codex Primary/Secondary windows).
+- **Predictive Aggregation**: Group related quotas and predict which one will hit its limit first using linear regression over historical usage.
+- **Usage History**: Persist usage snapshots locally to enable trend analysis and forecasting.
+- **Configurable Views**: Customize column layout and visibility (e.g., hiding specific quotas or showing predicted reset times).
 
 ### Non-Functional Requirements
 
@@ -36,7 +38,10 @@ graph TD
     end
 
     subgraph Quota Hub Plugin
-        Main[index.ts] --> Registry[registry.ts]
+        Main[index.ts] --> Service[QuotaService]
+        CLI[cli.ts] --> Service
+        Service --> Registry[registry.ts]
+        Service --> History[HistoryService]
         Registry --> P1[Antigravity Provider]
         Registry --> P2[Codex Provider]
         Main --> PB[progress-bar.ts]
@@ -45,6 +50,7 @@ graph TD
     subgraph External APIs
         P1 -->|Google OAuth| AG_API[Antigravity Cloud API]
         P2 -->|OpenAI OAuth| CX_API[Codex Usage API]
+        P3 -->|GitHub OAuth| GH_API[GitHub Usage API]
     end
 ```
 
@@ -73,6 +79,23 @@ To intercept a `/quotas` command without core changes, the plugin will implement
 3.  **Forced Routing**: The command definition will set the `model` to `opencodeQuotas:execute`.
 4.  **Local Execution**: A `LocalQuotaModel` (implementing `LanguageModelV1`) will handle the request entirely within the plugin sandbox, returning the ASCII progress bars as text.
 5.  **Snap-back**: Since the model override is per-request, the next user message automatically reverts to their previously selected LLM.
+
+### Smart Aggregation & Prediction
+
+The plugin can merge multiple source quotas into a single "Smart Group".
+
+- **Strategies**:
+    - `most_critical` (Default): Uses linear regression on historical data to predict which quota in the group will reach its limit first.
+    - `max`: Displays the quota with the highest usage percentage.
+    - `min`: Displays the quota with the lowest usage percentage.
+    - `mean`: Displays a synthetic average of all quotas in the group.
+    - `median`: Displays the median usage percentage.
+
+- **Predictive Modeling**:
+    - The `HistoryService` records `(timestamp, usage)` snapshots.
+    - `QuotaService` calculates the slope of usage (units/ms).
+    - `TimeToLimit = (Limit - CurrentUsage) / Slope`.
+    - The UI displays the predicted time-to-limit (e.g., "in 12m (predicted)").
 
 ### Data Model
 
@@ -142,4 +165,4 @@ The `progress-bar.ts` utility handles ANSI color transitions:
 
 ---
 
-_Last Updated: 2026-01-11_
+_Last Updated: 2026-01-12_

@@ -17,12 +17,15 @@ A unified quota visualization plugin for OpenCode, aggregating data from multipl
 ## ✨ Features
 
 - **Service Registry Pattern**: Decoupled architecture allowing easy addition of new quota providers.
-- **Unified Interface**: Standardized `QuotaData` format for all providers.
+- **Smart Quota Aggregation**: Group multiple quotas (e.g., Codex Primary/Secondary) and predict which one will hit its limit first using **Linear Regression**.
+- **Usage History**: Persistent usage tracking in `~/.local/share/opencode/quota-history.json` for predictive modeling.
+- **Configurable Paths**: Specify your config location via the `OPENCODE_QUOTAS_CONFIG_PATH` environment variable.
 - **Visual Progress Bars**: Clean ASCII-based progress bars for percentage-based quotas.
-- **Detailed Reporting**: Support for "Unlimited" quotas, balance-based reporting, and reset time information.
+- **Detailed Reporting**: Support for "Unlimited" quotas, balance-based reporting, and predicted reset times.
 - **Provider Support**:
   - **Antigravity**: Full support for local and cloud quotas with category-based breakdown.
   - **Codex**: Support for primary/secondary rate limit windows and credit balances.
+  - **GitHub Copilot**: Tracking for monthly suggestions (Free) and premium requests (Pro).
 
 ## 🚀 Usage
 
@@ -75,6 +78,7 @@ Available columns: `status`, `name`, `bar`, `percent`, `value`, `reset`, `window
 ```text
 🟢 Antigravity Pro    : ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱  60% resets in 2h 15m
 🔴 Codex Primary      : ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱  90% resets in 45m
+🟢 GitHub Copilot    : ▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  15% resets in 12d
 ⚪ Codex Credits      : Unlimited
 ```
 

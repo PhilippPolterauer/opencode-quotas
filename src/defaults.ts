@@ -26,4 +26,13 @@ export const DEFAULT_CONFIG: QuotaConfig = {
             { name: "Premium", patterns: ["claude", "gpt", "o1"] },
         ],
     },
+    aggregatedGroups: [
+        {
+            id: "codex-smart",
+            name: "Codex Usage",
+            sources: ["codex-primary", "codex-secondary"],
+            strategy: "most_critical"
+        }
+    ],
+    historyMaxAgeHours: 24,
 };

@@ -1,6 +1,5 @@
 import {
   fetchCloudQuota,
-  formatAbsoluteTime,
   formatRelativeTime,
   loadConfig,
   type ModelConfig,
