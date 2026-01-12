@@ -77,7 +77,7 @@ graph TD
 
 ### Core Requirements
 
-1. **Unified Dashboard**: Aggregate quotas from Antigravity, Codex, and others.
+1. **Unified Quota View**: Aggregate quotas from Antigravity, Codex, and others.
 2. **Resilience**: A failure in one provider (e.g., network error) must not crash the `show-quotas` command.
 3. **Accuracy**: Handle "Unlimited" quotas and balance-based reporting gracefully.
 4. **Visuals**: Use high-quality ASCII bars for percentage-based limits.

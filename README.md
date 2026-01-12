@@ -1,12 +1,12 @@
-# OpenCode Quota Hub
+# OpenCode Quotas Plugin
 
-🚀 **TL;DR**: One command (`/quotas`) to see all your AI and system quotas in one beautiful ASCII dashboard. Stop checking five different websites.
+🚀 **TL;DR**: An OpenCode plugin that automatically injects your AI and system quotas into the footer of your conversations, so you're always aware of your usage. Also includes a handy CLI.
 
 ⚠️ **Disclaimer**: This is an independent community project. It is **not** affiliated with, endorsed by, or officially associated with [OpenCode.ai](https://opencode.ai).
 
 ---
 
-A unified quota visualization plugin for OpenCode, aggregating data from multiple providers (Antigravity, Codex, etc.) into a single, polished terminal interface.
+A unified quota visualization plugin for OpenCode, aggregating data from multiple providers (Antigravity, Codex, etc.) and injecting a polished status summary directly into your chat workflow.
 
 ## 🎨 Vibe Check
 
@@ -14,12 +14,13 @@ A unified quota visualization plugin for OpenCode, aggregating data from multipl
 
 ## 📸 Screenshot
 
-![OpenCode Quotas Dashboard](./assets/screenshot.png)
+![OpenCode Quotas Plugin](./assets/screenshot.png)
 
 ---
 
 ## ✨ Features
 
+- **Seamless Integration**: Automatically appends a quota summary to the end of every assistant response.
 - **Service Registry Pattern**: Decoupled architecture allowing easy addition of new quota providers.
 - **Smart Quota Aggregation**: Group multiple quotas (e.g., Codex Primary/Secondary) and predict which one will hit its limit first using **Linear Regression**.
 - **Usage History**: Persistent usage tracking in `~/.local/share/opencode/quota-history.json` for predictive modeling.
@@ -37,7 +38,7 @@ Once installed as an OpenCode plugin, system quotas are automatically displayed 
 
 ### 💻 CLI Mode
 
-You can also run the quota dashboard directly in your terminal!
+You can also run the quota view directly in your terminal!
 
 ```bash
 # Run directly via npx
@@ -77,7 +78,7 @@ Available columns: `status`, `name`, `bar`, `percent`, `value`, `reset`, `window
 }
 ```
 
-### Example Dashboard Output
+### Example Output
 
 ```text
 Opencode Quotas (Used)

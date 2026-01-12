@@ -1,4 +1,4 @@
-# Design & Requirements: Opencode Quota Hub
+# Design & Requirements: Opencode Quotas Plugin
 
 This document outlines the requirements and architectural design for the `opencode-quotas` plugin.
 
@@ -7,7 +7,7 @@ This document outlines the requirements and architectural design for the `openco
 ### Functional Requirements
 
 - **Aggregate Quotas**: Retrieve quota data from multiple independent providers (Antigravity, Codex, etc.).
-- **Message Footer Display**: Automatically render quotas in the chat footer after each final assistant response for passive monitoring (optional/configurable).
+- **Message Footer Injection**: Automatically render quotas in the chat footer after each final assistant response for passive monitoring (optional/configurable).
 - **On-Demand Command**: Provide a `/quotas` command to display detailed quota information in a message bubble.
 - **Visual Representation**: Display percentage-based quotas using ASCII progress bars with ANSI color gradients.
 - **Dynamic Grouping**: Allow user-defined grouping of granular metrics (e.g., grouping various Google models into "Flash" or "Pro" tiers).
@@ -17,7 +17,7 @@ This document outlines the requirements and architectural design for the `openco
 
 ### Non-Functional Requirements
 
-- **Resilience**: The failure of one provider (API downtime/auth) must not crash the dashboard.
+- **Resilience**: The failure of one provider (API downtime/auth) must not crash the plugin execution.
 - **Extensibility**: Registry Pattern for easy addition of new providers.
 - **Performance**: Parallel fetching using `Promise.all`.
 - **Local Execution**: Handle commands locally via the "Local Provider" pattern to avoid unnecessary LLM costs and latency.
@@ -37,7 +37,7 @@ graph TD
         User -->|chat.footer| Main
     end
 
-    subgraph Quota Hub Plugin
+    subgraph Quota Plugin
         Main[index.ts] --> Service[QuotaService]
         CLI[cli.ts] --> Service
         Service --> Registry[registry.ts]
