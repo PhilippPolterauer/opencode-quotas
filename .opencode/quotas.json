@@ -1,7 +1,7 @@
 {
-  "debug": true,
-  "footer": true,
-  "progressBar": {
-    "noColor": true
-  }
+    "debug": true,
+    "footer": true,
+    "progressBar": {
+        "color": false
+    }
 }

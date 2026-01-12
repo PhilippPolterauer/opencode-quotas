@@ -33,6 +33,11 @@ The plugin expects certain environment variables or configuration files dependin
 - **Antigravity**: Relies on local configuration files and cloud credentials managed via `src/antigravity/auth.ts`.
 - **Codex**: Typically uses an API key or session token (see `src/providers/codex.ts`).
 
+### Debugging & Configuration
+
+- **Configuration File**: The plugin can be configured via `.opencode/quotas.json`. This file controls debug mode, UI settings, and more.
+- **Debug Logs**: When debug mode is enabled (via `debug: true` in config), logs are written to `~/.local/share/opencode/quotas-debug.log`. These logs contain detailed hook invocation and processing info.
+
 Agents should verify these dependencies before attempting to fetch live data.
 
 ---

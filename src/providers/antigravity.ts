@@ -29,24 +29,6 @@ function getIndicatorSymbol(
   return "";
 }
 
-function buildDetails(
-  config: Required<AGConfig>,
-  remainingFraction: number,
-  resetTime: Date | null,
-): string {
-  const remainingPercent = Math.max(0, Math.min(100, remainingFraction * 100));
-  const indicator = getIndicatorSymbol(config, remainingFraction);
-  const remainingLabel = `${Math.round(remainingPercent)}% remaining${indicator}`;
-
-  if (!resetTime) {
-    return remainingLabel;
-  }
-
-  const resetIn = formatRelativeTime(resetTime);
-  const resetAt = formatAbsoluteTime(resetTime);
-  return `${remainingLabel} | resets in ${resetIn} (${resetAt})`;
-}
-
 /**
  * Categorize models based on user-defined groups or fall back to defaults.
  */
@@ -139,7 +121,14 @@ export function createAntigravityProvider(
           0,
           Math.min(100, (1 - remainingFraction) * 100),
         );
-        const details = buildDetails(config, remainingFraction, data.resetTime);
+
+        // Calculate metadata
+        const indicator = getIndicatorSymbol(config, remainingFraction);
+        
+        let reset: string | undefined;
+        if (data.resetTime) {
+            reset = `resets in ${formatRelativeTime(data.resetTime)}`;
+        }
 
         entries.push({
           id: `ag-${category.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
@@ -147,7 +136,8 @@ export function createAntigravityProvider(
           used: usedPercent,
           limit: 100,
           unit: "%",
-          details,
+          reset,
+          info: indicator.trim() || undefined,
         });
       }
 

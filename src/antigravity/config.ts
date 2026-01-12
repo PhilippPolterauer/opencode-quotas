@@ -28,11 +28,11 @@ export interface QuotaConfig {
 
 const DEFAULT_CONFIG: Required<QuotaConfig> = {
   quotaSource: "auto",
-  format: "{category}: {percent}% ({resetIn})",
-  separator: " | ",
-  displayMode: "all",
-  alwaysAppend: true,
-  quotaMarker: "> AG Quota:",
+  format: "{category}: {percent}% ({resetIn})", // Unused
+  separator: " | ", // Unused
+  displayMode: "all", // Unused
+  alwaysAppend: true, // Unused
+  quotaMarker: "> AG Quota:", // Unused
   pollingInterval: 30000,
   alertThresholds: [0.5, 0.1, 0.05],
   indicators: [
@@ -65,44 +65,6 @@ export async function loadConfig(
   }
 
   return DEFAULT_CONFIG;
-}
-
-export function formatQuotaEntry(
-  format: string,
-  data: {
-    category: string;
-    percent: string;
-    resetIn: string | null;
-    resetAt: string | null;
-    model: string;
-  },
-): string {
-  let result = format
-    .replace("{category}", data.category)
-    .replace("{percent}", data.percent)
-    .replace("{model}", data.model);
-
-  if (format.includes("{resetIn}")) {
-    if (data.resetIn) {
-      result = result.replace("{resetIn}", data.resetIn);
-    } else {
-      result = result
-        .replace(/\s*\(\{resetIn}\)/, "")
-        .replace(/\s*\{resetIn}/, "");
-    }
-  }
-
-  if (format.includes("{resetAt}")) {
-    if (data.resetAt) {
-      result = result.replace("{resetAt}", data.resetAt);
-    } else {
-      result = result
-        .replace(/\s*\(\{resetAt}\)/, "")
-        .replace(/\s*\{resetAt}/, "");
-    }
-  }
-
-  return result;
 }
 
 export { DEFAULT_CONFIG };

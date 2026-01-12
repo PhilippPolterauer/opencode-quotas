@@ -1,8 +1,8 @@
 import { type AnsiColor, type ProgressBarConfig } from "../interfaces";
 
 const DEFAULT_BAR_WIDTH = 24;
-const DEFAULT_FILLED_CHAR = "#";
-const DEFAULT_EMPTY_CHAR = "-";
+const DEFAULT_FILLED_CHAR = "▰";
+const DEFAULT_EMPTY_CHAR = "▱";
 
 const ANSI_CODES: Record<AnsiColor, string> = {
   red: "\x1b[31m",
@@ -17,12 +17,15 @@ const ANSI_CODES: Record<AnsiColor, string> = {
 };
 
 function shouldUseColor(config?: ProgressBarConfig): boolean {
-  if (config?.noColor === true) return false;
   if (process.env.NO_COLOR !== undefined) return false;
   if (process.env.OPENCODE_QUOTAS_NO_COLOR !== undefined) return false;
   if (process.env.FORCE_COLOR !== undefined) return true;
+  
+  // If not a TTY, generally disable color unless specifically forced by env
   if (!process.stdout.isTTY) return false;
-  return true;
+
+  // Default to false unless enabled in config
+  return config?.color === true;
 }
 
 function colorize(text: string, color: AnsiColor | undefined, useColor: boolean): string {
@@ -45,7 +48,33 @@ export type RenderQuotaBarParts = {
   percent: string;
   valuePart: string;
   detailsPart: string;
+  statusEmoji: string;
 };
+
+export function getQuotaStatusEmoji(
+  ratio: number,
+  config: ProgressBarConfig = {}
+): string {
+  // Default thresholds if not provided
+  const gradients = config.gradients || [
+    { threshold: 0.5, color: "green" },
+    { threshold: 0.8, color: "yellow" },
+    { threshold: 1.0, color: "red" },
+  ];
+
+  const sorted = [...gradients].sort((a, b) => a.threshold - b.threshold);
+  
+  // Find the matching level
+  const match = sorted.find((g) => ratio <= g.threshold);
+  const color = match ? match.color : sorted[sorted.length - 1]?.color || "red";
+
+  switch (color) {
+    case "green": return "🟢";
+    case "yellow": return "🟡";
+    case "red": return "🔴";
+    default: return "⚪"; // Grey/Unknown
+  }
+}
 
 export function renderQuotaBarParts(
   used: number,
@@ -103,7 +132,7 @@ export function renderQuotaBarParts(
   const emptyStr = emptyChar.repeat(emptyLen);
 
   const useColor = shouldUseColor(config);
-  const bar = `[${colorize(filledStr, barColor, useColor)}${emptyStr}]`;
+  const bar = `${colorize(filledStr, barColor, useColor)}${emptyStr}`;
 
   const percentRaw = limit > 0 ? `${Math.round(ratio * 100)}%` : "n/a";
   const percent = percentRaw === "n/a" ? percentRaw : percentRaw.padStart(4);
@@ -112,12 +141,16 @@ export function renderQuotaBarParts(
   // Only append colon if label is present and not empty
   const labelPart = options.label ? `${options.label}: ` : "";
 
+  // Determine Emoji
+  const statusEmoji = getQuotaStatusEmoji(ratio, config);
+
   return {
     labelPart,
     bar,
     percent,
     valuePart: `(${valueText})`,
     detailsPart: options.details ? ` | ${options.details}` : "",
+    statusEmoji,
   };
 }
 

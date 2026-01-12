@@ -4,6 +4,25 @@ export interface QuotaData {
   used: number;
   limit: number | null;
   unit: string;
+  
+  /**
+   * Reset time description (e.g. "in 2h 41m" or "at 12:00").
+   */
+  reset?: string;
+  
+  /**
+   * Window or period description (e.g. "5h window" or "Monthly").
+   */
+  window?: string;
+
+  /**
+   * Extra information or alerts (e.g. "!!" or "unlimited").
+   */
+  info?: string;
+
+  /**
+   * @deprecated Use reset, window, info instead.
+   */
   details?: string;
 }
 
@@ -12,9 +31,27 @@ export interface QuotaGroup {
   patterns: string[];
 }
 
+
+export type QuotaColumn = 
+  | "name" 
+  | "bar" 
+  | "percent" 
+  | "value" 
+  | "reset" 
+  | "window" 
+  | "info"
+  | "status";
+
 export interface QuotaConfig {
   displayMode: QuotaDisplayMode;
   progressBar?: ProgressBarConfig;
+  table?: {
+      /**
+       * Columns to display in the quota table.
+       * Defaults to a smart selection based on data.
+       */
+      columns?: QuotaColumn[];
+  };
   /**
    * Whether to show quotas in the chat footer automatically.
    * Defaults to true.
@@ -74,9 +111,9 @@ export interface ProgressBarConfig {
   emptyChar?: string;
   show?: "used" | "available";
   /**
-   * Disable ANSI colors regardless of gradient configuration.
+   * Enable ANSI colors. Defaults to false.
    */
-  noColor?: boolean;
+  color?: boolean;
   // Define color levels. The bar will use the color of the first level
   // whose threshold is greater than or equal to the current usage ratio.
   gradients?: GradientLevel[];

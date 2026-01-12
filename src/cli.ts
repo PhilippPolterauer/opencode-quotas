@@ -65,6 +65,8 @@ async function main() {
     );
 
     console.log(""); // Empty line
+    console.log("📊 OpenCode Quotas");
+    console.log("------------------");
 
     renderQuotaTable(filteredResults, {
         progressBarConfig: DEFAULT_CONFIG.progressBar,

@@ -8,8 +8,9 @@ describe("Progress Bar Rendering", () => {
       unit: "%",
     });
 
-    // Default width is 24, so 50% is 12 chars
-    expect(result).toContain("[############------------]");
+    // Default width is 24, so 50% is 12 chars.
+    // No brackets [], using ▰ and ▱
+    expect(result).toContain("▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱");
     expect(result).toContain("50%");
     expect(result).toContain("(50/100 %)");
     expect(result).toContain("Test:");
@@ -22,7 +23,7 @@ describe("Progress Bar Rendering", () => {
       config: { width: 10 },
     });
 
-    expect(result).toContain("[#####-----]");
+    expect(result).toContain("▰▰▰▰▰▱▱▱▱▱");
     expect(result).toContain("50%");
   });
 
@@ -32,7 +33,8 @@ describe("Progress Bar Rendering", () => {
       unit: "items",
     });
 
-    expect(result).toContain("[------------------------]");
+    // Should be all empty chars
+    expect(result).toContain("▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱");
     expect(result).toContain("n/a");
     expect(result).toContain("(10/0 items)");
   });
@@ -67,7 +69,8 @@ describe("Progress Bar Rendering", () => {
     });
 
     // 100 - 30 = 70 available. 70% of 10 chars is 7.
-    expect(result).toContain("[#######---]");
+    // Expect slanted chars, no brackets
+    expect(result).toContain("▰▰▰▰▰▰▰▱▱▱");
     expect(result).toContain("70%");
     expect(result).toContain("(70/100 GB)");
   });

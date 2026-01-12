@@ -51,7 +51,6 @@ export function formatAbsoluteTime(targetDate: Date): string {
 
 export {
   loadConfig,
-  formatQuotaEntry,
   DEFAULT_CONFIG,
   type QuotaConfig,
   type QuotaSource,

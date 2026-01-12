@@ -26,39 +26,59 @@ A unified quota visualization plugin for OpenCode, aggregating data from multipl
 
 ## 🚀 Usage
 
-Once installed as an OpenCode plugin, system quotas are automatically displayed in the **message footer** after every final assistant response (this can be disabled in settings).
+Once installed as an OpenCode plugin, system quotas are automatically displayed in the **message footer** after every final assistant response.
+
+### 💻 CLI Mode
+
+You can also run the quota dashboard directly in your terminal!
+
+```bash
+# Run directly via npx
+npx opencode-quotas
+
+# Or install globally
+npm install -g opencode-quotas
+opencode-quotas
+```
+
+The CLI output is **colorful by default** and includes status emojis for quick health checks.
 
 ### Color Output
-Color output is **disabled by default** to ensure compatibility with the OpenCode UI.
+Color output is **enabled by default**.
 
-If you want to enable colors (e.g., for local CLI usage):
+If you want to disable colors (e.g., for plain text logging):
 
-- Env: `NO_COLOR=0` or `OPENCODE_QUOTAS_NO_COLOR=0`
-- Config: Set `progressBar.noColor` to `false` in your defaults.
+- Env: `NO_COLOR=1` or `OPENCODE_QUOTAS_NO_COLOR=1`
+- Config: Set `progressBar.color` to `false` in your `.opencode/quotas.json`.
 
 ### Model Mapping
 By default, the plugin attempts to show only the quota relevant to the current model being used. You can configure this mapping in `defaults.ts`.
 
-You can also trigger a detailed quota dashboard at any time using the command:
+### Configurable Views
+You can customize which columns appear in the quota table by modifying your `.opencode/quotas.json`.
 
-```bash
-/quotas
+Available columns: `status`, `name`, `bar`, `percent`, `value`, `reset`, `window`, `info`.
+
+**Default View:** `status`, `name`, `bar`, `percent`, `reset`
+
+**Example Config:**
+```json
+{
+  "table": {
+    "columns": ["status", "name", "bar", "value", "window"]
+  }
+}
 ```
 
 ### Example Dashboard Output
 
 ```text
-📊 SYSTEM QUOTAS
-
-[Antigravity GPUs]  [████████████░░░░░░░░░░] 60%
-  └ 40% remaining 🟢 | resets in 2h 15m (1/11/2026, 4:30:00 PM)
-
-[Codex Primary]     [████░░░░░░░░░░░░░░░░░░] 20%
-  └ 1h window | resets in 45m
-
-[Codex Credits]     150.50 credits (Unlimited)
-  └ balance
+🟢 Antigravity Pro    : ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱  60% resets in 2h 15m
+🔴 Codex Primary      : ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱  90% resets in 45m
+⚪ Codex Credits      : Unlimited
 ```
+
+> **Note**: Avoid using square brackets `[]` in provider names or labels, as the OpenCode UI may interpret them as links.
 
 ## 🛠 Development (Powered by Bun)
 

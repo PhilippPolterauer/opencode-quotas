@@ -6,7 +6,7 @@ export const DEFAULT_CONFIG: QuotaConfig = {
     footer: true,
     debug: false,
     progressBar: {
-        noColor: true,
+        color: true,
         gradients: [
             { threshold: 0.5, color: "green" },
             { threshold: 0.8, color: "yellow" },

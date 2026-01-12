@@ -178,23 +178,6 @@ function formatRelativeSeconds(seconds: number): string {
   return `${minutes}m`;
 }
 
-function windowDetails(snapshot: RateLimitWindowSnapshot): string | null {
-  const details: string[] = [];
-  const windowSeconds = toNumber(snapshot.limit_window_seconds);
-  const windowLabel = describeWindow(windowSeconds);
-  if (windowLabel) details.push(windowLabel);
-
-  const resetAfter = toNumber(snapshot.reset_after_seconds);
-  const resetAt = toNumber(snapshot.reset_at);
-  if (resetAfter !== null) {
-    details.push(`resets in ${formatRelativeSeconds(resetAfter)}`);
-  } else if (resetAt !== null) {
-    details.push(`resets at ${new Date(resetAt * 1000).toLocaleTimeString()}`);
-  }
-
-  return details.length > 0 ? details.join(" | ") : null;
-}
-
 function parseRateLimitWindow(
   id: string,
   label: string,
@@ -203,14 +186,30 @@ function parseRateLimitWindow(
   const usedPercent = toNumber(snapshot.used_percent);
   if (usedPercent === null) return null;
 
-  const details = windowDetails(snapshot);
+  // Window info
+  let window: string | undefined;
+  const windowSeconds = toNumber(snapshot.limit_window_seconds);
+  const windowLabel = describeWindow(windowSeconds);
+  if (windowLabel) window = windowLabel;
+
+  // Reset info
+  let reset: string | undefined;
+  const resetAfter = toNumber(snapshot.reset_after_seconds);
+  const resetAt = toNumber(snapshot.reset_at);
+  if (resetAfter !== null) {
+    reset = `resets in ${formatRelativeSeconds(resetAfter)}`;
+  } else if (resetAt !== null) {
+    reset = `resets at ${new Date(resetAt * 1000).toLocaleTimeString()}`;
+  }
+
   return {
     id: `codex-${id}`,
     providerName: `Codex ${label}`,
     used: Math.max(0, Math.min(100, usedPercent)),
     limit: 100,
     unit: "%",
-    details: details ?? undefined,
+    window,
+    reset,
   };
 }
 
@@ -226,7 +225,7 @@ function parseCredits(credits: CreditStatusDetails): QuotaData | null {
       ...base,
       used: 0,
       limit: null,
-      details: "unlimited",
+      info: "unlimited",
     };
   }
 
@@ -237,7 +236,7 @@ function parseCredits(credits: CreditStatusDetails): QuotaData | null {
     ...base,
     used: balance,
     limit: null,
-    details: "balance",
+    info: "balance",
   };
 }
 

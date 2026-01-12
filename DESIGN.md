@@ -80,13 +80,31 @@ The `QuotaData` interface serves as the Common Data Model:
 
 ```typescript
 interface QuotaData {
-  providerName: string; // e.g., "Antigravity Pro"
+  id: string; // Unique identifier (e.g., "codex-primary")
+  providerName: string; // Display name
   used: number; // Current consumption
   limit: number | null; // Total allowed (null for unlimited)
   unit: string; // e.g., "%", "credits"
-  details?: string; // e.g., "resets in 2h"
+  
+  // Structured metadata for flexible rendering
+  reset?: string;  // e.g. "resets in 2h"
+  window?: string; // e.g. "5h window"
+  info?: string;   // e.g. "!!", "unlimited"
 }
 ```
+
+### Flexible Rendering
+
+The plugin supports configurable column layouts for the quota table. The available columns are:
+- `name`: Provider name
+- `bar`: Progress bar
+- `percent`: Usage percentage
+- `value`: Raw value (e.g. "50/100 %")
+- `reset`: Reset time
+- `window`: Rate limit window
+- `info`: Additional status info
+
+Users can customize which columns are displayed via the configuration.
 
 ### Quota Identity & Filtering
 

@@ -3,7 +3,7 @@ import { renderQuotaTable } from "../src/ui/quota-table";
 import { type QuotaData } from "../src/interfaces";
 
 describe("Quota Table Rendering", () => {
-    test("aligns detail columns", () => {
+    test("aligns structured columns", () => {
         const quotas: QuotaData[] = [
             {
                 id: "1",
@@ -11,32 +11,39 @@ describe("Quota Table Rendering", () => {
                 used: 50,
                 limit: 100,
                 unit: "%",
-                details: "Short | Detail 2",
+                reset: "in 1h",
+                info: "Status",
             },
             {
                 id: "2",
-                providerName: "Longer",
+                providerName: "Longer Name",
                 used: 50,
                 limit: 100,
                 unit: "%",
-                details: "Longer Column | Detail 2",
+                reset: "in 22h 30m",
+                info: "Longer Info",
             },
         ];
 
-        const rows = renderQuotaTable(quotas, {});
+        const rows = renderQuotaTable(quotas, {
+            tableConfig: { columns: ["name", "reset", "info"] }
+        });
         
-        // "Longer Column" is 13 chars.
+        // "Longer Name" is 11 chars.
         // "Short" is 5 chars.
-        // "Short" should be padded to 13.
+        // "Short" should be padded to 11.
         
         const row1 = rows[0].line;
         const row2 = rows[1].line;
 
-        expect(row1).toContain("Short         | Detail 2");
-        expect(row2).toContain("Longer Column | Detail 2");
+        // name + ":" + " " + reset + " " + info
+        expect(row1).toContain("Short      :");
+        expect(row1).toContain("in 1h      ");
+        expect(row2).toContain("Longer Name:");
+        expect(row2).toContain("in 22h 30m ");
     });
 
-    test("handles mixed column counts", () => {
+    test("handles optional columns", () => {
         const quotas: QuotaData[] = [
             {
                 id: "1",
@@ -44,7 +51,7 @@ describe("Quota Table Rendering", () => {
                 used: 50,
                 limit: 100,
                 unit: "%",
-                details: "Col 1",
+                window: "5h",
             },
             {
                 id: "2",
@@ -52,15 +59,16 @@ describe("Quota Table Rendering", () => {
                 used: 50,
                 limit: 100,
                 unit: "%",
-                details: "Column 1 Is Long | Col 2",
             },
         ];
 
-        const rows = renderQuotaTable(quotas, {});
+        const rows = renderQuotaTable(quotas, {
+            tableConfig: { columns: ["name", "window"] }
+        });
         
-        // Row 1 Col 1 is the last segment in its row, so it is NOT padded.
-        expect(rows[0].line).toContain("Col 1");
-        expect(rows[0].line).not.toContain("Col 1            "); 
+        expect(rows[0].line).toContain("5h");
+        expect(rows[0].line).toContain("A:");
+        expect(rows[1].line.trim()).toBe("B:"); // window is empty for B
     });
 
     test("aligns unlimited quotas", () => {
@@ -71,7 +79,7 @@ describe("Quota Table Rendering", () => {
                 used: 50,
                 limit: 100,
                 unit: "%",
-                details: "Limited Col 1 | Rest",
+                reset: "in 1h",
             },
             {
                 id: "2",
@@ -79,38 +87,16 @@ describe("Quota Table Rendering", () => {
                 used: 0,
                 limit: null,
                 unit: "credits",
-                details: "Unlim",
+                reset: "never",
             },
         ];
         
-        const rows = renderQuotaTable(quotas, {});
-        // "Limited Col 1" len 13.
-        // "Unlim" len 5.
-        // Row 2 has 1 col. Not padded.
-        expect(rows[1].line).toContain("(Unlimited) | Unlim");
+        const rows = renderQuotaTable(quotas, {
+            tableConfig: { columns: ["name", "bar", "reset"] }
+        });
         
-        // What if Unlimited had 2 cols?
-         const quotas2: QuotaData[] = [
-            {
-                id: "1",
-                providerName: "Limited",
-                used: 50,
-                limit: 100,
-                unit: "%",
-                details: "Short | Rest",
-            },
-            {
-                id: "2",
-                providerName: "Unlimited",
-                used: 0,
-                limit: null,
-                unit: "credits",
-                details: "Longer First Col | Rest",
-            },
-        ];
-        
-        const rows2 = renderQuotaTable(quotas2, {});
-        // "Short" should be padded to match "Longer First Col"
-        expect(rows2[0].line).toContain("Short            | Rest");
+        expect(rows[1].line).toContain("Unlimited");
+        expect(rows[1].line).not.toContain("[Unlimited]");
+        expect(rows[1].line).toContain("never");
     });
 });
