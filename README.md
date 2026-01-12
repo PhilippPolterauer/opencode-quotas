@@ -12,6 +12,10 @@ A unified quota visualization plugin for OpenCode, aggregating data from multipl
 
 💡 _Hint: This plugin was 100% vibe-coded. If the progress bars look too cool to be true, it's because the development vibes were immaculate._
 
+## 📸 Screenshot
+
+![OpenCode Quotas Dashboard](./assets/screenshot.png)
+
 ---
 
 ## ✨ Features
@@ -76,10 +80,13 @@ Available columns: `status`, `name`, `bar`, `percent`, `value`, `reset`, `window
 ### Example Dashboard Output
 
 ```text
-🟢 Antigravity Pro    : ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱  60% resets in 2h 15m
-🔴 Codex Primary      : ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱  90% resets in 45m
-🟢 GitHub Copilot    : ▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  15% resets in 12d
-⚪ Codex Credits      : Unlimited
+Opencode Quotas (Used)
+ST    QUOTA NAME            USED   UTILIZATION            RESET     ETTL
+───   -------------------   ----   --------------------   -------   ----
+ERR   Antigravity Flash     100%   ████████████████████   2h 44m    -   
+ERR   Antigravity Premium   100%   ████████████████████   11h 8m    -   
+OK    Antigravity Pro        40%   ████████░░░░░░░░░░░░   2h 55m    -   
+ERR   Codex Usage           100%   ████████████████████   37h 14m   -
 ```
 
 > **Note**: Avoid using square brackets `[]` in provider names or labels, as the OpenCode UI may interpret them as links.

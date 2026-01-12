@@ -1,8 +1,14 @@
-import { type AnsiColor, type ProgressBarConfig } from "../interfaces";
+import { type AnsiColor, type ProgressBarConfig, type GradientLevel } from "../interfaces";
 
 const DEFAULT_BAR_WIDTH = 20;
 const DEFAULT_FILLED_CHAR = "█";
 const DEFAULT_EMPTY_CHAR = "░";
+
+const DEFAULT_GRADIENTS: GradientLevel[] = [
+    { threshold: 0.5, color: "green" },
+    { threshold: 0.8, color: "yellow" },
+    { threshold: 1.0, color: "red" },
+];
 
 const ANSI_CODES: Record<AnsiColor, string> = {
   red: "\x1b[31m",
@@ -13,6 +19,8 @@ const ANSI_CODES: Record<AnsiColor, string> = {
   cyan: "\x1b[36m",
   white: "\x1b[37m",
   gray: "\x1b[90m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
   reset: "\x1b[0m",
 };
 
@@ -28,7 +36,7 @@ function shouldUseColor(config?: ProgressBarConfig): boolean {
   return config?.color === true;
 }
 
-function colorize(text: string, color: AnsiColor | undefined, useColor: boolean): string {
+export function colorize(text: string, color: AnsiColor | undefined, useColor: boolean): string {
   if (!useColor) return text;
   if (!color || color === "reset") return text;
   return `${ANSI_CODES[color]}${text}${ANSI_CODES.reset}`;
@@ -57,11 +65,7 @@ export function getQuotaStatusEmoji(
   config: ProgressBarConfig = {}
 ): string {
   // Default thresholds if not provided
-  const gradients = config.gradients || [
-    { threshold: 0.5, color: "green" },
-    { threshold: 0.8, color: "yellow" },
-    { threshold: 1.0, color: "red" },
-  ];
+  const gradients = config.gradients || DEFAULT_GRADIENTS;
 
   const sorted = [...gradients].sort((a, b) => a.threshold - b.threshold);
   
@@ -82,11 +86,7 @@ export function getQuotaStatusText(
   config: ProgressBarConfig = {}
 ): string {
   // Default thresholds if not provided
-  const gradients = config.gradients || [
-    { threshold: 0.5, color: "green" },
-    { threshold: 0.8, color: "yellow" },
-    { threshold: 1.0, color: "red" },
-  ];
+  const gradients = config.gradients || DEFAULT_GRADIENTS;
 
   const sorted = [...gradients].sort((a, b) => a.threshold - b.threshold);
   
@@ -117,6 +117,7 @@ export function renderQuotaBarParts(
   const filledChar = config.filledChar ?? DEFAULT_FILLED_CHAR;
   const emptyChar = config.emptyChar ?? DEFAULT_EMPTY_CHAR;
   const showMode = config.show ?? "used";
+  const useColor = shouldUseColor(config);
 
   // Calculate value and ratio based on mode
   let displayValue = used;
@@ -137,6 +138,8 @@ export function renderQuotaBarParts(
 
   // Determine Color
   let barColor: AnsiColor = "reset";
+  let statusColor: AnsiColor = "reset";
+  
   if (config.gradients && config.gradients.length > 0) {
     // Sort gradients by threshold to ensure correct evaluation
     const sorted = [...config.gradients].sort(
@@ -148,20 +151,23 @@ export function renderQuotaBarParts(
 
     if (match) {
       barColor = match.color;
+      statusColor = match.color;
     } else {
       // If ratio exceeds all thresholds (e.g. > 100%), use the last defined color (highest severity)
       barColor = sorted[sorted.length - 1].color;
+      statusColor = sorted[sorted.length - 1].color;
     }
   }
 
   const filledStr = filledChar.repeat(filledLen);
   const emptyStr = emptyChar.repeat(emptyLen);
 
-  const useColor = shouldUseColor(config);
-  const bar = `${colorize(filledStr, barColor, useColor)}${emptyStr}`;
+  const bar = `${colorize(filledStr, barColor, useColor)}${emptyStr}`; // Only color filled part? Or empty too? usually just filled.
 
   const percentRaw = limit > 0 ? `${Math.round(ratio * 100)}%` : "n/a";
-  const percent = percentRaw === "n/a" ? percentRaw : percentRaw.padStart(4);
+  const percentText = percentRaw === "n/a" ? percentRaw : percentRaw.padStart(4);
+  const percent = colorize(percentText, barColor, useColor);
+  
   const valueText = `${formatNumber(displayValue)}/${formatNumber(limit)} ${options.unit}`;
 
   // Only append colon if label is present and not empty
@@ -169,7 +175,8 @@ export function renderQuotaBarParts(
 
   // Determine Emoji
   const statusEmoji = getQuotaStatusEmoji(ratio, config);
-  const statusText = getQuotaStatusText(ratio, config);
+  const statusTextRaw = getQuotaStatusText(ratio, config);
+  const statusText = colorize(statusTextRaw, statusColor, useColor);
 
   return {
     labelPart,

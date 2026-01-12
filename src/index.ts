@@ -5,7 +5,7 @@ import { HistoryService } from "./services/history-service";
 import { renderQuotaTable } from "./ui/quota-table";
 import { type QuotaData } from "./interfaces";
 import { QuotaCache } from "./quota-cache";
-import { appendFileSync } from "node:fs";
+import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { inspect } from "node:util";
@@ -17,14 +17,14 @@ const processingLocks = new Map<string, Promise<void>>();
 // Helper for debugging
 function logToDebugFile(msg: string, data: any, enabled: boolean) {
     if (!enabled) return;
-    try {
-        const logPath = join(homedir(), ".local", "share", "opencode", "quotas-debug.log");
-        const timestamp = new Date().toISOString();
-        const payload = data ? ` ${inspect(data, { depth: null, colors: false, breakLength: Infinity })}` : "";
-        appendFileSync(logPath, `[${timestamp}] ${msg}${payload}\n`);
-    } catch {
-        // ignore logging errors
-    }
+    const logPath = join(homedir(), ".local", "share", "opencode", "quotas-debug.log");
+    const timestamp = new Date().toISOString();
+    const payload = data ? ` ${inspect(data, { depth: null, colors: false, breakLength: Infinity })}` : "";
+    appendFile(logPath, `[${timestamp}] ${msg}${payload}\n`).catch(() => {});
+}
+
+interface ExtendedAssistantMessage extends AssistantMessage {
+    type?: string;
 }
 
 /**
@@ -132,14 +132,14 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                     return;
                 }
 
-                const assistantMsg = result.info as AssistantMessage;
+                const assistantMsg = result.info as ExtendedAssistantMessage;
                 
                 // Log message details
                 debugLog("message:details", {
                     id: input.messageID,
                     mode: assistantMsg.mode,
                     tokens: assistantMsg.tokens,
-                    type: (assistantMsg as any).type,
+                    type: assistantMsg.type,
                     modelID: assistantMsg.modelID,
                     providerID: assistantMsg.providerID
                 });
@@ -154,7 +154,7 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 // Skip reasoning messages (explicit mode or type)
                 if (
                     assistantMsg.mode === "reasoning" ||
-                    (assistantMsg as any).type === "reasoning"
+                    assistantMsg.type === "reasoning"
                 ) {
                     debugLog("skip:reasoning_mode");
                     processedMessages.add(input.messageID);
@@ -174,10 +174,20 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                     return;
                 }
                 
-                // Heuristic: Check if text starts with "Thinking:" which indicates a reasoning block
+                // Heuristic: Check if text starts with "Thinking:" or similar which indicates a reasoning block
                 // that might not be tagged correctly in metadata.
-                if (output.text.trim().match(/^Thinking:/i)) {
-                    debugLog("skip:thinking_text_heuristic");
+                const trimmedText = output.text.trim();
+                
+                // 1. XML-style thinking tags
+                if (trimmedText.startsWith("<thinking>") || trimmedText.startsWith("<antThinking>")) {
+                    debugLog("skip:thinking_xml_tag");
+                    processedMessages.add(input.messageID);
+                    return;
+                }
+
+                // 2. Common headers followed by newline or strictly at start
+                if (trimmedText.match(/^(Thinking|Reasoning|Analysis):\s*(\n|$)/i)) {
+                    debugLog("skip:thinking_header_heuristic");
                     processedMessages.add(input.messageID);
                     return;
                 }

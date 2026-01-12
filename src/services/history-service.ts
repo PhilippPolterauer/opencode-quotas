@@ -1,4 +1,5 @@
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
+import { writeFile, readFile } from "node:fs/promises";
+import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { type IHistoryService, type HistoryPoint, type QuotaData } from "../interfaces";
@@ -7,6 +8,7 @@ export class HistoryService implements IHistoryService {
     private historyPath: string;
     private data: Record<string, HistoryPoint[]> = {};
     private maxWindowMs: number = 24 * 60 * 60 * 1000; // Keep 24 hours of history
+    private saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(customPath?: string) {
         this.historyPath = customPath || join(homedir(), ".local", "share", "opencode", "quota-history.json");
@@ -20,7 +22,7 @@ export class HistoryService implements IHistoryService {
             }
 
             if (existsSync(this.historyPath)) {
-                const raw = readFileSync(this.historyPath, "utf-8");
+                const raw = await readFile(this.historyPath, "utf-8");
                 this.data = JSON.parse(raw);
             }
         } catch (e) {
@@ -71,11 +73,43 @@ export class HistoryService implements IHistoryService {
         this.maxWindowMs = hours * 60 * 60 * 1000;
     }
 
-    private save(): void {
-        try {
-            writeFileSync(this.historyPath, JSON.stringify(this.data, null, 2), "utf-8");
-        } catch (e) {
-            // Silently fail to avoid crashing the main process
+    async pruneAll(): Promise<void> {
+        const now = Date.now();
+        const cutoff = now - this.maxWindowMs;
+        let changed = false;
+
+        for (const id in this.data) {
+            const originalLen = this.data[id].length;
+            this.data[id] = this.data[id].filter(p => p.timestamp >= cutoff);
+            
+            if (this.data[id].length !== originalLen) {
+                changed = true;
+            }
+
+            // Remove key if empty to free memory
+            if (this.data[id].length === 0) {
+                delete this.data[id];
+                changed = true;
+            }
         }
+
+        if (changed) {
+            this.save();
+        }
+    }
+
+    private save(): void {
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+        }
+
+        this.saveTimeout = setTimeout(async () => {
+            try {
+                await writeFile(this.historyPath, JSON.stringify(this.data, null, 2), "utf-8");
+            } catch (e) {
+                // Silently fail to avoid crashing the main process
+            }
+            this.saveTimeout = null;
+        }, 5000);
     }
 }

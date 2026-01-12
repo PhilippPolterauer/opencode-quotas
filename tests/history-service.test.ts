@@ -1,24 +1,25 @@
-import { expect, test, describe, spyOn, beforeEach, afterEach } from "bun:test";
+import { expect, test, describe, spyOn, beforeEach, afterEach, mock } from "bun:test";
 import { HistoryService } from "../src/services/history-service";
+import * as fsPromises from "node:fs/promises";
 import * as fs from "node:fs";
 import { type QuotaData } from "../src/interfaces";
 
 describe("HistoryService", () => {
-    let writeFileSyncSpy: any;
-    let readFileSyncSpy: any;
+    let writeFileSpy: any;
+    let readFileSpy: any;
     let existsSyncSpy: any;
     let mkdirSyncSpy: any;
 
     beforeEach(() => {
-        writeFileSyncSpy = spyOn(fs, "writeFileSync").mockImplementation(() => {});
-        readFileSyncSpy = spyOn(fs, "readFileSync").mockImplementation(() => "{}");
+        writeFileSpy = spyOn(fsPromises, "writeFile").mockImplementation(() => Promise.resolve());
+        readFileSpy = spyOn(fsPromises, "readFile").mockImplementation(() => Promise.resolve("{}"));
         existsSyncSpy = spyOn(fs, "existsSync").mockImplementation(() => true);
         mkdirSyncSpy = spyOn(fs, "mkdirSync").mockImplementation(() => undefined);
     });
 
     afterEach(() => {
-        writeFileSyncSpy.mockRestore();
-        readFileSyncSpy.mockRestore();
+        writeFileSpy.mockRestore();
+        readFileSpy.mockRestore();
         existsSyncSpy.mockRestore();
         mkdirSyncSpy.mockRestore();
     });
@@ -38,7 +39,7 @@ describe("HistoryService", () => {
                 { timestamp: now, used: 10, limit: 100 }
             ]
         };
-        readFileSyncSpy.mockReturnValue(JSON.stringify(mockHistory));
+        readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
 
         const service = new HistoryService("/tmp/history.json");
         await service.init();
@@ -48,7 +49,7 @@ describe("HistoryService", () => {
         expect(history[0].used).toBe(10);
     });
 
-    test("appends new snapshot", async () => {
+    test("appends new snapshot and saves after debounce", async () => {
         const service = new HistoryService("/tmp/history.json");
         await service.init();
 
@@ -57,8 +58,15 @@ describe("HistoryService", () => {
         const history = service.getHistory("test-quota", 100000);
         expect(history).toHaveLength(1);
         expect(history[0].used).toBe(50);
-        expect(writeFileSyncSpy).toHaveBeenCalled();
-    });
+        
+        // Should not be called immediately due to debounce
+        expect(writeFileSpy).not.toHaveBeenCalled();
+
+        // Wait for debounce (5000ms + buffer)
+        await new Promise(resolve => setTimeout(resolve, 5100));
+        
+        expect(writeFileSpy).toHaveBeenCalled();
+    }, { timeout: 10000 });
 
     test("prunes old data based on max age", async () => {
         const now = Date.now();
@@ -71,7 +79,7 @@ describe("HistoryService", () => {
                 { timestamp: now - (23 * oneHour), used: 20, limit: 100 }  // 23 hours old (should be kept)
             ]
         };
-        readFileSyncSpy.mockReturnValue(JSON.stringify(mockHistory));
+        readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
 
         const service = new HistoryService("/tmp/history.json");
         // Default max age is 24h
@@ -97,7 +105,7 @@ describe("HistoryService", () => {
                 { timestamp: now - (5 * oneHour), used: 10, limit: 100 }, // 5 hours old
             ]
         };
-        readFileSyncSpy.mockReturnValue(JSON.stringify(mockHistory));
+        readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
 
         const service = new HistoryService("/tmp/history.json");
         await service.init();
@@ -113,5 +121,37 @@ describe("HistoryService", () => {
         // The 5h old point should be gone, only the new one remains
         expect(history).toHaveLength(1);
         expect(history[0].used).toBe(50);
+    });
+
+    test("pruneAll removes old data for all quotas", async () => {
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000;
+        
+        const mockHistory = {
+            "quota-a": [
+                { timestamp: now - (25 * oneHour), used: 10, limit: 100 },
+                { timestamp: now - (1 * oneHour), used: 20, limit: 100 }
+            ],
+            "quota-b": [
+                { timestamp: now - (30 * oneHour), used: 5, limit: 100 } // All old
+            ]
+        };
+        readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
+
+        const service = new HistoryService("/tmp/history.json");
+        await service.init();
+        
+        await service.pruneAll();
+        
+        const historyA = service.getHistory("quota-a", 48 * oneHour);
+        expect(historyA).toHaveLength(1);
+        expect(historyA[0].used).toBe(20);
+
+        const historyB = service.getHistory("quota-b", 48 * oneHour);
+        expect(historyB).toHaveLength(0);
+        
+        // Ensure empty keys are removed from memory (optional but good for leaks)
+        // Accessing private data for verification is tricky in TS without @ts-ignore or casting
+        // We'll trust getHistory returning empty array implies data is gone or validly filtered.
     });
 });

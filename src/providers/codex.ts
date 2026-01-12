@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { type IQuotaProvider, type QuotaData } from "../interfaces";
@@ -60,9 +60,9 @@ type RateLimitStatusPayload = {
   credits?: CreditStatusDetails | null;
 };
 
-function readAuthFile(): AuthFile | null {
+async function readAuthFile(): Promise<AuthFile | null> {
   try {
-    const raw = readFileSync(AUTH_PATH, "utf8");
+    const raw = await readFile(AUTH_PATH, "utf8");
     const parsed = JSON.parse(raw) as AuthFile;
     return parsed;
   } catch {
@@ -282,7 +282,7 @@ export function createCodexProvider(): IQuotaProvider {
   return {
     id: "codex",
     async fetchQuota(): Promise<QuotaData[]> {
-      const auth = readAuthFile();
+      const auth = await readAuthFile();
       if (!auth) {
         throw new Error("Codex auth.json not found");
       }

@@ -117,6 +117,7 @@ export interface IHistoryService {
     append(snapshot: QuotaData[]): Promise<void>;
     getHistory(quotaId: string, windowMs: number): HistoryPoint[];
     setMaxAge(hours: number): void;
+    pruneAll(): Promise<void>;
 }
 
 export interface IQuotaProvider {
@@ -140,6 +141,8 @@ export type AnsiColor =
   | "cyan"
   | "white"
   | "gray"
+  | "bold"
+  | "dim"
   | "reset";
 
 export interface GradientLevel {

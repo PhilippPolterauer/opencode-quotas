@@ -1,4 +1,4 @@
-import { renderQuotaBarParts, type RenderQuotaBarParts } from "./progress-bar";
+import { renderQuotaBarParts, type RenderQuotaBarParts, colorize } from "./progress-bar";
 import { type ProgressBarConfig, type QuotaData, type QuotaColumn } from "../interfaces";
 
 type RenderedQuotaLine = {
@@ -30,6 +30,7 @@ export function renderQuotaTable(
     if (quotas.length === 0) return [];
 
     const columns = options.tableConfig?.columns || DEFAULT_COLUMNS;
+    const useColor = options.progressBarConfig?.color ?? false;
 
     // 1. Pre-calculate cell data for every row
     const rows = quotas.map((quota) => {
@@ -45,19 +46,30 @@ export function renderQuotaTable(
             });
         }
 
+        const name = colorize(quota.providerName, "cyan", useColor);
+        const status = barParts 
+            ? barParts.statusText 
+            : (quota.info === "unlimited" ? colorize("OK ", "green", useColor) : colorize("UNK", "gray", useColor));
+        
+        // Strip "resets in " or "resets at " prefix for cleaner table display
+        const resetRaw = quota.reset?.replace(/^resets (in|at) /, "") || "";
+        const reset = colorize(resetRaw, "gray", useColor);
+        
+        const ettl = colorize(quota.predictedReset?.replace(/\(predicted\)/, "").trim() || "-", "gray", useColor);
+
         return {
             quota,
             barParts,
             cells: {
-                name: quota.providerName,
-                bar: barParts ? barParts.bar : (isUnlimited ? "Unlimited" : ""),
+                name,
+                bar: barParts ? barParts.bar : (isUnlimited ? colorize("Unlimited", "green", useColor) : ""),
                 percent: barParts ? barParts.percent : "",
                 value: barParts ? barParts.valuePart : `${quota.used} ${quota.unit}`,
-                reset: quota.reset?.replace(/^in /, "") || "", // Strip "in " if present
-                ettl: quota.predictedReset?.replace(/\(predicted\)/, "").trim() || "-",
+                reset,
+                ettl,
                 window: quota.window || "",
                 info: quota.info || "",
-                status: barParts ? barParts.statusText : (quota.info === "unlimited" ? "OK " : "UNK"),
+                status,
             } as Record<QuotaColumn, string>
         };
     });
@@ -95,32 +107,26 @@ export function renderQuotaTable(
         // percent: right
         // others: left
         
+        const coloredHeader = colorize(headerTitle, "bold", useColor);
         let segment = "";
         let sep = "";
         
+        // When padding, we need to consider visible length of the colored string vs stripped
+        // But here `headerTitle` is uncolored when calculating padding, so standard pad works
+        // provided we apply color AFTER padding, OR pad properly.
+        // Actually, padStart/padEnd on the uncolored string, THEN colorize.
+        
+        let paddedTitle = "";
         if (col === "percent") {
-            segment = headerTitle.padStart(width);
+            paddedTitle = headerTitle.padStart(width);
         } else {
-            segment = headerTitle.padEnd(width);
+            paddedTitle = headerTitle.padEnd(width);
         }
+        segment = colorize(paddedTitle, "bold", useColor);
         
-        // Separator logic
-        // status: 3 chars -> "---" or "───"
-        // name: "-------------------"
-        // bar: "--------------------"
-        // Use "─" for consistency with user request (they used "─" for ST and "-" for others, or mixed?
-        // User example:
-        // ST   QUOTA NAME
-        // ───  -------------------
-        // ST uses "───", Name uses "---".
-        // Let's try to match that or just use "-" for all.
-        // The user explicitly used `───` for ST. I'll use `-` for others as in their example.
-        
-        if (col === "status") {
-            sep = "─".repeat(width);
-        } else {
-            sep = "-".repeat(width);
-        }
+        const sepChar = "─"; // Use for all
+        const sepStr = sepChar.repeat(width);
+        sep = colorize(sepStr, "dim", useColor);
 
         headerSegments.push(segment);
         separatorSegments.push(sep);
