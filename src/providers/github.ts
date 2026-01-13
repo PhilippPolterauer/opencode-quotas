@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { type IQuotaProvider, type QuotaData } from "../interfaces";
@@ -15,10 +15,10 @@ interface AuthInfo {
 
 type AuthFile = Record<string, AuthInfo>;
 
-function readAuthFile(): AuthFile | null {
+async function readAuthFile(): Promise<AuthFile | null> {
     for (const path of [AUTH_PATH_LOCAL, AUTH_PATH_CONFIG]) {
         try {
-            const raw = readFileSync(path, "utf8");
+            const raw = await readFile(path, "utf8");
             return JSON.parse(raw) as AuthFile;
         } catch {
             continue;
@@ -112,7 +112,7 @@ export function createGithubProvider(): IQuotaProvider {
     return {
         id: "github-copilot",
         async fetchQuota(): Promise<QuotaData[]> {
-            const auth = readAuthFile();
+            const auth = await readAuthFile();
             if (!auth) {
                 throw new Error("Opencode auth.json not found");
             }
