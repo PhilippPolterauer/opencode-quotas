@@ -11,7 +11,7 @@ This document outlines the requirements and architectural design for the `openco
 | **Aggregate Quotas** | Retrieve quota data from multiple independent providers (Antigravity, Codex, etc.) |
 | **Message Footer Injection** | Automatically render quotas in the chat footer after each final assistant response |
 | **Visual Representation** | Display percentage-based quotas using ASCII progress bars with ANSI color gradients |
-| **Dynamic Grouping** | Allow user-defined grouping of granular metrics into categories |
+| **Pattern-Based Aggregation** | Group raw quotas into logical categories using pattern matching at the service layer |
 | **Predictive Aggregation** | Group related quotas and predict which one will hit its limit first using linear regression |
 | **Usage History** | Persist usage snapshots locally to enable trend analysis and forecasting |
 | **Configurable Views** | Customize column layout and visibility |
@@ -214,8 +214,7 @@ Key configuration options:
 | `progressBar.color` | boolean | `true` | Enable ANSI colors |
 | `table.columns` | array | auto | Columns to display |
 | `disabled` | array | `[]` | Quota IDs to hide |
-| `groups` | object | preset | Provider groupings |
-| `aggregatedGroups` | array | preset | Smart aggregation config |
+| `aggregatedGroups` | array | preset | Smart aggregation with patterns or explicit sources |
 | `historyMaxAgeHours` | number | `24` | History retention |
 | `pollingInterval` | number | `60000` | Cache refresh interval |
 

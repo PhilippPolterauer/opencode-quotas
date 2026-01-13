@@ -29,14 +29,28 @@ export const DEFAULT_CONFIG: QuotaConfig = {
         "antigravity/gpt-4": ["ag-premium"],
     },
     filterByCurrentModel: true,
-    groups: {
-        antigravity: [
-            { name: "Flash", patterns: ["flash"] },
-            { name: "Pro", patterns: ["pro", "gemini"] },
-            { name: "Premium", patterns: ["claude", "gpt", "o1"] },
-        ],
-    },
     aggregatedGroups: [
+        {
+            id: "ag-flash",
+            name: "Antigravity Flash",
+            patterns: ["flash"],
+            providerId: "antigravity",
+            strategy: "most_critical",
+        },
+        {
+            id: "ag-pro",
+            name: "Antigravity Pro",
+            patterns: ["pro", "gemini"],
+            providerId: "antigravity",
+            strategy: "most_critical",
+        },
+        {
+            id: "ag-premium",
+            name: "Antigravity Premium",
+            patterns: ["claude", "gpt", "o1"],
+            providerId: "antigravity",
+            strategy: "most_critical",
+        },
         {
             id: "codex-smart",
             name: "Codex Usage",

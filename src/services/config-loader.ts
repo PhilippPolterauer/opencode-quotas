@@ -21,9 +21,6 @@ export class ConfigLoader {
         if (DEFAULT_CONFIG.progressBar) {
             config.progressBar = { ...DEFAULT_CONFIG.progressBar, ...initialConfig?.progressBar };
         }
-        if (DEFAULT_CONFIG.groups) {
-            config.groups = { ...DEFAULT_CONFIG.groups, ...initialConfig?.groups };
-        }
         if (DEFAULT_CONFIG.aggregatedGroups) {
             config.aggregatedGroups = [
                 ...DEFAULT_CONFIG.aggregatedGroups, 
@@ -87,9 +84,6 @@ export class ConfigLoader {
         }
         if (userConfig.table) {
             target.table = { ...target.table, ...userConfig.table };
-        }
-        if (userConfig.groups) {
-            target.groups = { ...target.groups, ...userConfig.groups };
         }
         if (userConfig.disabled) {
             target.disabled = userConfig.disabled;

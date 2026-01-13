@@ -48,11 +48,11 @@ opencode-quotas --provider google --model antigravity-gemini-3-flash
 
 ## Supported Providers
 
-| Provider | Quota IDs | Description |
-| :--- | :--- | :--- |
-| **Antigravity** | `ag-flash`, `ag-pro`, `ag-premium` | Tracks Flash, Pro, and Premium tiers with reset timers. |
-| **Codex** | `codex-primary`, `codex-secondary`, `codex-smart` | Monitors rate limits and credit balances. |
-| **GitHub Copilot** | — | ⚠️ Not yet implemented. The provider exists but is not wired up. |
+| Provider | Raw Quota IDs | Aggregated IDs | Description |
+| :--- | :--- | :--- | :--- |
+| **Antigravity** | `ag-raw-*` | `ag-flash`, `ag-pro`, `ag-premium` | Raw model quotas aggregated by pattern into Flash, Pro, and Premium tiers. |
+| **Codex** | `codex-primary`, `codex-secondary` | `codex-smart` | Rate limits aggregated using most-critical strategy. |
+| **GitHub Copilot** | — | — | ⚠️ Not yet implemented. |
 
 > **Note**: Quota IDs are used in configuration options like `disabled` and `modelMapping`.
 
@@ -130,8 +130,24 @@ Permanently hide quotas you don't care about:
 
 ### Smart Aggregation
 
-Combine multiple quotas into a single display row. Useful when a provider has multiple rate limits.
+Combine multiple quotas into a single display row using explicit sources or pattern matching.
 
+**Pattern-based aggregation** (matches raw quota IDs/names):
+```json
+{
+  "aggregatedGroups": [
+    {
+      "id": "ag-flash",
+      "name": "Antigravity Flash",
+      "patterns": ["flash"],
+      "providerId": "antigravity",
+      "strategy": "most_critical"
+    }
+  ]
+}
+```
+
+**Explicit source aggregation** (specify exact quota IDs):
 ```json
 {
   "aggregatedGroups": [
@@ -144,6 +160,16 @@ Combine multiple quotas into a single display row. Useful when a provider has mu
   ]
 }
 ```
+
+**Aggregation options:**
+| Option | Type | Description |
+| :--- | :--- | :--- |
+| `id` | string | Unique identifier for the aggregated quota |
+| `name` | string | Display name |
+| `sources` | string[] | Explicit quota IDs to include |
+| `patterns` | string[] | Patterns to match against raw quota IDs/names |
+| `providerId` | string | Limit pattern matching to a specific provider |
+| `strategy` | string | Aggregation strategy (see below) |
 
 **Aggregation strategies:**
 | Strategy | Description |
@@ -279,7 +305,7 @@ See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JS
 | `progressBar.show` | string | `"used"` | `"used"` or `"available"` |
 | `table.columns` | string[] | (auto) | Columns to display |
 | `table.header` | boolean | `true` | Show column headers |
-| `aggregatedGroups` | array | (see defaults) | Quota aggregation rules |
+| `aggregatedGroups` | array | (see defaults) | Quota aggregation with patterns or sources |
 | `pollingInterval` | number | `60000` | Refresh interval in ms |
 | `debug` | boolean | `false` | Enable debug logging |
 

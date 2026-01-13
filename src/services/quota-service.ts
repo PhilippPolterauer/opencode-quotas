@@ -5,7 +5,8 @@ import {
     type IQuotaProvider, 
     type IHistoryService,
     type IPredictionEngine,
-    type IAggregationService
+    type IAggregationService,
+    type AggregatedGroup
 } from "../interfaces";
 import { getQuotaRegistry } from "../registry";
 import { createAntigravityProvider } from "../providers/antigravity";
@@ -70,9 +71,8 @@ export class QuotaService {
 
         // Register Antigravity
         try {
-            const agGroups = this.config.groups?.antigravity;
             registry.register(
-                createAntigravityProvider(agGroups, {
+                createAntigravityProvider({
                     debug: !!this.config.debug,
                 }),
             );
@@ -194,7 +194,8 @@ export class QuotaService {
         let results = [...quotas];
 
         for (const group of this.config.aggregatedGroups) {
-            const sourceQuotas = results.filter(q => group.sources.includes(q.id));
+            // Resolve source quotas from explicit sources and patterns
+            const sourceQuotas = this.resolveGroupSources(results, group);
             if (sourceQuotas.length === 0) continue;
 
             const strategy = group.strategy || "most_critical";
@@ -227,13 +228,61 @@ export class QuotaService {
                     providerName: group.name 
                 };
 
-                // Remove sources and add representative
-                const sourceIds = new Set(group.sources);
+                // Remove matched sources and add representative
+                const sourceIds = new Set(sourceQuotas.map(q => q.id));
                 results = results.filter(q => !sourceIds.has(q.id));
                 results.push(displayQuota);
             }
         }
         return results;
+    }
+
+    /**
+     * Resolves which quotas belong to an AggregatedGroup using explicit sources and patterns.
+     */
+    private resolveGroupSources(quotas: QuotaData[], group: AggregatedGroup): QuotaData[] {
+        const matched: QuotaData[] = [];
+        const matchedIds = new Set<string>();
+
+        // 1. Explicit sources (highest priority)
+        if (group.sources && group.sources.length > 0) {
+            for (const quota of quotas) {
+                if (group.sources.includes(quota.id)) {
+                    matched.push(quota);
+                    matchedIds.add(quota.id);
+                }
+            }
+        }
+
+        // 2. Pattern matching
+        if (group.patterns && group.patterns.length > 0) {
+            for (const quota of quotas) {
+                // Skip if already matched by explicit source
+                if (matchedIds.has(quota.id)) continue;
+
+                // Filter by providerId if specified
+                if (group.providerId) {
+                    const providerMatch = 
+                        quota.providerName.toLowerCase().includes(group.providerId.toLowerCase()) ||
+                        quota.id.toLowerCase().startsWith(group.providerId.toLowerCase());
+                    if (!providerMatch) continue;
+                }
+
+                // Check if any pattern matches
+                const matchTarget = `${quota.id} ${quota.providerName}`.toLowerCase();
+                const patternMatches = group.patterns.some(pattern => {
+                    const lowerPattern = pattern.toLowerCase();
+                    return matchTarget.includes(lowerPattern);
+                });
+
+                if (patternMatches) {
+                    matched.push(quota);
+                    matchedIds.add(quota.id);
+                }
+            }
+        }
+
+        return matched;
     }
 
     private filterQuotas(quotas: QuotaData[], context?: { providerId?: string; modelId?: string }): QuotaData[] {

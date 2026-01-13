@@ -31,12 +31,6 @@ export interface QuotaData {
   details?: string;
 }
 
-export interface QuotaGroup {
-  name: string;
-  patterns: string[];
-}
-
-
 export type QuotaColumn = 
   | "name" 
   | "bar" 
@@ -72,14 +66,10 @@ export type QuotaColumn =
     * Defaults to true.
     */
    showFooterTitle?: boolean;
-   /**
-    * Optional grouping definitions per provider ID.
-    */
-   groups?: Record<string, QuotaGroup[]>;
-   /**
-    * List of quota IDs to hide from display.
-    */
-   disabled?: string[];
+    /**
+     * List of quota IDs to hide from display.
+     */
+    disabled?: string[];
    /**
     * Maps a model identifier (e.g., "antigravity:gemini-1.5-flash") to a list
     * of relevant quota IDs. If provided, the plugin will only show these
@@ -121,12 +111,42 @@ export type AggregationStrategy =
   | "median";       // Median percentage used
 
 export interface AggregatedGroup {
-    id: string;              // Unique ID for the smart group (e.g. "codex-smart")
-    name: string;            // Display name (e.g. "Codex Usage")
-    sources: string[];       // IDs of quotas to track (e.g. ["codex-primary", "codex-secondary"])
-    strategy?: AggregationStrategy; // Defaults to "most_critical"
-    predictionWindowMinutes?: number; // Time window for regression (default: 60)
-    predictionShortWindowMinutes?: number; // Short time window for spikes (default: 5)
+    /**
+     * Unique ID for the resulting group (e.g., "ag-flash", "codex-smart").
+     */
+    id: string;
+    /**
+     * Display name (e.g., "Antigravity Flash", "Codex Usage").
+     */
+    name: string;
+    /**
+     * Explicit IDs of quotas to include in this group.
+     * Use this for precise control over which quotas are aggregated.
+     */
+    sources?: string[];
+    /**
+     * Regex/Glob patterns to match against raw quota IDs or provider names.
+     * The provider will return raw quotas with IDs like "ag-raw-gemini-1-5-flash".
+     * Patterns are matched case-insensitively.
+     */
+    patterns?: string[];
+    /**
+     * Optional: Limit pattern matching to a specific provider ID.
+     * If set, only quotas from this provider will be considered for pattern matching.
+     */
+    providerId?: string;
+    /**
+     * Aggregation strategy. Defaults to "most_critical".
+     */
+    strategy?: AggregationStrategy;
+    /**
+     * Time window for regression (default: 60 minutes).
+     */
+    predictionWindowMinutes?: number;
+    /**
+     * Short time window for spikes (default: 5 minutes).
+     */
+    predictionShortWindowMinutes?: number;
 }
 
 export interface HistoryPoint {
