@@ -153,6 +153,54 @@ export interface IQuotaRegistry {
   getAll(): IQuotaProvider[];
 }
 
+/**
+ * Interface for prediction engines that calculate time-to-limit.
+ */
+export interface IPredictionEngine {
+    /**
+     * Predicts time to limit in milliseconds using historical usage data.
+     * @param quotaId - The quota identifier to predict for
+     * @param windowMinutes - The long time window for regression (default: 60)
+     * @param shortWindowMinutes - The short time window for capturing spikes
+     * @returns Time to limit in milliseconds, or Infinity if usage is stable/decreasing
+     */
+    predictTimeToLimit(quotaId: string, windowMinutes?: number, shortWindowMinutes?: number): number;
+}
+
+/**
+ * Interface for aggregation services that combine multiple quotas.
+ */
+export interface IAggregationService {
+    /**
+     * Aggregates quotas using the most critical (shortest time-to-limit) strategy.
+     */
+    aggregateMostCritical(
+        quotas: QuotaData[], 
+        windowMinutes?: number, 
+        shortWindowMinutes?: number
+    ): QuotaData | null;
+    
+    /**
+     * Aggregates quotas by selecting the one with highest usage ratio.
+     */
+    aggregateMax(quotas: QuotaData[]): QuotaData;
+    
+    /**
+     * Aggregates quotas by selecting the one with lowest usage ratio.
+     */
+    aggregateMin(quotas: QuotaData[]): QuotaData;
+    
+    /**
+     * Aggregates quotas by averaging their usage ratios.
+     */
+    aggregateAverage(
+        quotas: QuotaData[], 
+        name: string, 
+        id: string, 
+        strategy: "mean" | "median"
+    ): QuotaData;
+}
+
 export type QuotaDisplayMode = "simple" | "detailed" | "hidden";
 
 export type AnsiColor =
