@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { AUTH_FILE } from "../utils/paths";
 import { type IQuotaProvider, type QuotaData } from "../interfaces";
-import { logToDebugFile } from "../utils/debug";
+import { logger } from "../logger";
 
 const AUTH_PATH = AUTH_FILE();
 const DEFAULT_BASE_URL = "https://chatgpt.com/backend-api";
@@ -66,11 +66,7 @@ async function readAuthFile(): Promise<AuthFile | null> {
     const parsed = JSON.parse(raw) as AuthFile;
     return parsed;
   } catch (e) {
-    logToDebugFile(
-      "provider:codex:auth_read_failed",
-      { authPath: AUTH_PATH, error: e },
-      process.env.OPENCODE_QUOTAS_DEBUG === "1",
-    );
+    logger.debug("provider:codex:auth_read_failed", { authPath: AUTH_PATH, error: e });
     // Fallback: try the config directory location
     try {
       const configPath = AUTH_PATH.replace("auth.json", "antigravity-accounts.json");
@@ -295,29 +291,17 @@ export function createCodexProvider(): IQuotaProvider {
   return {
     id: "codex",
     async fetchQuota(): Promise<QuotaData[]> {
-      logToDebugFile(
-        "provider:codex:fetch_start",
-        { authPath: AUTH_PATH },
-        process.env.OPENCODE_QUOTAS_DEBUG === "1",
-      );
+      logger.debug("provider:codex:fetch_start", { authPath: AUTH_PATH });
 
       const auth = await readAuthFile();
       if (!auth) {
-        logToDebugFile(
-          "provider:codex:no_auth",
-          { authPath: AUTH_PATH },
-          process.env.OPENCODE_QUOTAS_DEBUG === "1",
-        );
+        logger.debug("provider:codex:no_auth", { authPath: AUTH_PATH });
         throw new Error("Codex auth.json not found");
       }
 
       const oauth = pickOauthAuth(auth);
       if (!oauth) {
-        logToDebugFile(
-          "provider:codex:no_oauth",
-          { availableProviders: Object.keys(auth) },
-          process.env.OPENCODE_QUOTAS_DEBUG === "1",
-        );
+        logger.debug("provider:codex:no_oauth", { availableProviders: Object.keys(auth) });
         throw new Error("Codex OAuth credentials missing");
       }
 
@@ -326,20 +310,12 @@ export function createCodexProvider(): IQuotaProvider {
         oauth.enterpriseUrl ??
         DEFAULT_BASE_URL;
 
-      logToDebugFile(
-        "provider:codex:request",
-        { providerID: oauth.providerID, baseUrl, url: buildUsageUrl(baseUrl) },
-        process.env.OPENCODE_QUOTAS_DEBUG === "1",
-      );
+        logger.debug("provider:codex:request", { providerID: oauth.providerID, baseUrl, url: buildUsageUrl(baseUrl) });
 
       const payload = await fetchQuotaPayload(oauth.access, baseUrl);
       const entries = extractCodexQuota(payload);
 
-      logToDebugFile(
-        "provider:codex:parse",
-        { count: entries.length },
-        process.env.OPENCODE_QUOTAS_DEBUG === "1",
-      );
+      logger.debug("provider:codex:parse", { count: entries.length });
 
       if (entries.length === 0) {
         throw new Error("Codex quota payload did not include rate limits");

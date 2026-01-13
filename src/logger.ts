@@ -1,7 +1,8 @@
 import { appendFile } from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { DEBUG_LOG_FILE } from "./utils/paths";
 import { inspect } from "node:util";
-import { DEBUG_LOG_FILENAME } from "./constants";
 
 export class Logger {
     private static instance: Logger;
@@ -10,6 +11,9 @@ export class Logger {
 
     private constructor() {
         this.logPath = DEBUG_LOG_FILE();
+        if (process.env.OPENCODE_QUOTAS_DEBUG === "1") {
+            this.debugEnabled = true;
+        }
     }
 
     public static getInstance(): Logger {
