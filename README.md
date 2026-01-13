@@ -58,6 +58,8 @@ opencode-quotas
 
 ### Example Output
 
+![Opencode Quotas Display](docs/QuotaDisplay.png)
+
 ```text
 Opencode Quotas (Used)
 ST    QUOTA NAME            USED   UTILIZATION            RESET     ETTL
