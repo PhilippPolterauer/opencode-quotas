@@ -1,6 +1,5 @@
 import { appendFile } from "node:fs/promises";
-import { join } from "node:path";
-import { homedir } from "node:os";
+import { DEBUG_LOG_FILE } from "./utils/paths";
 import { inspect } from "node:util";
 import { DEBUG_LOG_FILENAME } from "./constants";
 
@@ -10,7 +9,7 @@ export class Logger {
     private logPath: string;
 
     private constructor() {
-        this.logPath = join(homedir(), ".local", "share", "opencode", DEBUG_LOG_FILENAME);
+        this.logPath = DEBUG_LOG_FILE();
     }
 
     public static getInstance(): Logger {

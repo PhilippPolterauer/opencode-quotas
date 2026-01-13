@@ -1,7 +1,7 @@
 import { writeFile, readFile } from "node:fs/promises";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { HISTORY_FILE } from "../utils/paths";
 import { type IHistoryService, type HistoryPoint, type QuotaData } from "../interfaces";
 import { logger } from "../logger";
 
@@ -12,7 +12,7 @@ export class HistoryService implements IHistoryService {
     private saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(customPath?: string) {
-        this.historyPath = customPath || join(homedir(), ".local", "share", "opencode", "quota-history.json");
+        this.historyPath = customPath || HISTORY_FILE();
     }
 
     async init(): Promise<void> {

@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { AUTH_FILE, getConfigDirectory } from "../utils/paths";
 import { join } from "node:path";
 import { type IQuotaProvider, type QuotaData } from "../interfaces";
 
-const AUTH_PATH_LOCAL = join(homedir(), ".local", "share", "opencode", "auth.json");
-const AUTH_PATH_CONFIG = join(homedir(), ".config", "opencode", "auth.json");
+const AUTH_PATH_LOCAL = AUTH_FILE();
+const AUTH_PATH_CONFIG = join(getConfigDirectory(), "auth.json");
 
 interface AuthInfo {
     type: string;
@@ -24,6 +24,7 @@ async function readAuthFile(): Promise<AuthFile | null> {
             continue;
         }
     }
+
     return null;
 }
 

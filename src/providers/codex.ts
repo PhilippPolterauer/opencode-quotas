@@ -1,10 +1,9 @@
 import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { AUTH_FILE } from "../utils/paths";
 import { type IQuotaProvider, type QuotaData } from "../interfaces";
 import { logToDebugFile } from "../utils/debug";
 
-const AUTH_PATH = join(homedir(), ".local", "share", "opencode", "auth.json");
+const AUTH_PATH = AUTH_FILE();
 const DEFAULT_BASE_URL = "https://chatgpt.com/backend-api";
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ERROR_BODY_CHARS = 2_000;
@@ -72,7 +71,15 @@ async function readAuthFile(): Promise<AuthFile | null> {
       { authPath: AUTH_PATH, error: e },
       process.env.OPENCODE_QUOTAS_DEBUG === "1",
     );
-    return null;
+    // Fallback: try the config directory location
+    try {
+      const configPath = AUTH_PATH.replace("auth.json", "antigravity-accounts.json");
+      // If the replacement is not valid, this will likely fail and we return null
+      const rawConfig = await readFile(configPath, "utf8");
+      return JSON.parse(rawConfig) as AuthFile;
+    } catch {
+      return null;
+    }
   }
 }
 

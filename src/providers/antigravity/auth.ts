@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { ANTIGRAVITY_ACCOUNTS_FILE } from "../../utils/paths";
 
 /**
  * PUBLIC OAUTH CREDENTIALS - INTENTIONALLY COMMITTED
@@ -51,7 +50,7 @@ interface CachedCredential extends CloudAuthCredentials {
 let cachedCredential: CachedCredential | null = null;
 
 function getAccountsFilePath(): string {
-  return join(homedir(), ".config", "opencode", "antigravity-accounts.json");
+  return ANTIGRAVITY_ACCOUNTS_FILE();
 }
 
 async function loadAccounts(): Promise<AccountsFile> {
