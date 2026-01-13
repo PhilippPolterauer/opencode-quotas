@@ -1,4 +1,5 @@
 import { type AnsiColor, type ProgressBarConfig, type GradientLevel } from "../interfaces";
+import { isValidNumber, clamp } from "../utils/validation";
 
 const DEFAULT_BAR_WIDTH = 20;
 const DEFAULT_FILLED_CHAR = "█";
@@ -127,15 +128,19 @@ export function renderQuotaBarParts(
   const showMode = config.show ?? "used";
   const useColor = shouldUseColor(config);
 
+  // Defensive guards: normalize inputs
+  const usedVal = isValidNumber(used) ? Math.max(0, used) : 0;
+  const limitVal = isValidNumber(limit) && limit > 0 ? limit : 0;
+
   // Calculate value and ratio based on mode
-  let displayValue = used;
+  let displayValue = usedVal;
   let ratio = 0;
 
-  if (limit > 0) {
+  if (limitVal > 0) {
     if (showMode === "available") {
-      displayValue = Math.max(0, limit - used);
+      displayValue = Math.max(0, limitVal - usedVal);
     }
-    ratio = displayValue / limit;
+    ratio = displayValue / limitVal;
   }
 
   // Cap visual ratio at 1.0 for the bar filling, but keep actual ratio for color calculation if needed
@@ -172,11 +177,11 @@ export function renderQuotaBarParts(
 
   const bar = `${colorize(filledStr, barColor, useColor)}${emptyStr}`; // Only color filled part? Or empty too? usually just filled.
 
-  const percentRaw = limit > 0 ? `${Math.round(ratio * 100)}%` : "n/a";
+  const percentRaw = limitVal > 0 ? `${Math.round(ratio * 100)}%` : "n/a";
   const percentText = percentRaw === "n/a" ? percentRaw : percentRaw.padStart(4);
   const percent = colorize(percentText, barColor, useColor);
   
-  const valueText = `${formatNumber(displayValue)}/${formatNumber(limit)} ${options.unit}`;
+  const valueText = `${formatNumber(displayValue)}/${formatNumber(limitVal)} ${options.unit}`;
 
   // Only append colon if label is present and not empty
   const labelPart = options.label ? `${options.label}: ` : "";

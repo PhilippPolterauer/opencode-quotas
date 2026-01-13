@@ -1,4 +1,5 @@
 import { type IQuotaProvider, type QuotaData, type IHistoryService } from "./interfaces";
+import { validateQuotaData } from "./utils/validation";
 
 import { logger } from "./logger";
 
@@ -78,6 +79,7 @@ export class QuotaCache {
         return refreshPromise;
     }
 
+
     private async doRefresh(): Promise<void> {
         try {
             const results = await Promise.all(
@@ -112,8 +114,14 @@ export class QuotaCache {
                 }),
             );
 
+            // Validate and normalize provider responses before storing
+            const flattened = results.flat();
+            const validatedData = flattened
+                .map(d => validateQuotaData(d))
+                .filter((v): v is QuotaData => v !== null);
+
             this.state = {
-                data: results.flat(),
+                data: validatedData,
                 fetchedAt: new Date(),
                 lastError: null,
             };

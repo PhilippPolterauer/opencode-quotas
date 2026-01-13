@@ -78,14 +78,15 @@ export class QuotaService {
                     this.config.historyMaxAgeHours = userConfig.historyMaxAgeHours;
                 }
                 if (userConfig.pollingInterval !== undefined) {
-                    const interval = Number(userConfig.pollingInterval);
-                    if (!Number.isFinite(interval) || interval <= 0) {
+                    const { validatePollingInterval } = await import("../utils/validation");
+                    const validated = validatePollingInterval(userConfig.pollingInterval);
+                    if (validated === null) {
                         console.warn('[QuotaService] pollingInterval is invalid, using default');
-                    } else if (interval < 10_000) {
+                    } else if (validated < 10_000) {
                         console.warn('[QuotaService] pollingInterval below 10s is not recommended');
-                        this.config.pollingInterval = Math.max(interval, 1_000);
+                        this.config.pollingInterval = Math.max(validated, 1_000);
                     } else {
-                        this.config.pollingInterval = interval;
+                        this.config.pollingInterval = validated;
                     }
                 }
                 if (userConfig.predictionShortWindowMinutes !== undefined) {
@@ -127,6 +128,20 @@ export class QuotaService {
             } catch (e) {
                 logger.error("init:provider_failed", { id: "codex", error: e });
                 console.warn("[QuotaService] Failed to initialize Codex provider:", e);
+            }
+
+            // Validate config values that are numeric-ish
+            try {
+                const { validatePollingInterval } = await import("../utils/validation");
+                const validated = validatePollingInterval(this.config.pollingInterval as unknown);
+                if (validated !== null) {
+                    this.config.pollingInterval = validated;
+                } else {
+                    // Reset to default to be safe
+                    this.config.pollingInterval = (DEFAULT_CONFIG.pollingInterval as number);
+                }
+            } catch (e) {
+                // If validation fails, keep defaults
             }
 
             this.initialized = true;

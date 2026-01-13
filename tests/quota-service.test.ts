@@ -81,4 +81,16 @@ describe("QuotaService", () => {
         expect(filtered).toHaveLength(1);
         expect(filtered[0].id).toBe("quota-1");
     });
+
+    test("invalid pollingInterval in config falls back to default", async () => {
+        const opencodeDir = join(tempDir, ".opencode");
+        await fs.mkdir(opencodeDir, { recursive: true });
+        await fs.writeFile(join(opencodeDir, "quotas.json"), JSON.stringify({ pollingInterval: "invalid" }));
+
+        const service = new QuotaService();
+        await service.init(tempDir);
+
+        const config = service.getConfig();
+        expect(config.pollingInterval).toBe(require("../src/defaults").DEFAULT_CONFIG.pollingInterval);
+    });
 });
