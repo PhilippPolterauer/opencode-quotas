@@ -39,5 +39,5 @@ export const DEFAULT_CONFIG: QuotaConfig = {
         },
     ],
     historyMaxAgeHours: 24,
-    pollingInterval: 1_000,
+    pollingInterval: 60_000,
 };

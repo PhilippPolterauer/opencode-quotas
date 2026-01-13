@@ -25,15 +25,20 @@ const ANSI_CODES: Record<AnsiColor, string> = {
 };
 
 function shouldUseColor(config?: ProgressBarConfig): boolean {
+  // FORCE_COLOR should take precedence when explicitly set
+  if (process.env.FORCE_COLOR !== undefined) return true;
+
+  // Respect explicit no-color flags
   if (process.env.NO_COLOR !== undefined) return false;
   if (process.env.OPENCODE_QUOTAS_NO_COLOR !== undefined) return false;
-  if (process.env.FORCE_COLOR !== undefined) return true;
-  
-  // If not a TTY, generally disable color unless specifically forced by env
+
+  // Respect explicit config request (useful for tests/environments)
+  if (config?.color === true) return true;
+
+  // If not a TTY, generally disable color
   if (!process.stdout.isTTY) return false;
 
-  // Default to false unless enabled in config
-  return config?.color === true;
+  return false;
 }
 
 export function colorize(text: string, color: AnsiColor | undefined, useColor: boolean): string {

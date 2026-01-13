@@ -78,7 +78,15 @@ export class QuotaService {
                     this.config.historyMaxAgeHours = userConfig.historyMaxAgeHours;
                 }
                 if (userConfig.pollingInterval !== undefined) {
-                    this.config.pollingInterval = userConfig.pollingInterval;
+                    const interval = Number(userConfig.pollingInterval);
+                    if (!Number.isFinite(interval) || interval <= 0) {
+                        console.warn('[QuotaService] pollingInterval is invalid, using default');
+                    } else if (interval < 10_000) {
+                        console.warn('[QuotaService] pollingInterval below 10s is not recommended');
+                        this.config.pollingInterval = Math.max(interval, 1_000);
+                    } else {
+                        this.config.pollingInterval = interval;
+                    }
                 }
                 if (userConfig.predictionShortWindowMinutes !== undefined) {
                     this.config.predictionShortWindowMinutes = userConfig.predictionShortWindowMinutes;
