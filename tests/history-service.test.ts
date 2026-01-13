@@ -1,5 +1,6 @@
 import { expect, test, describe, spyOn, beforeEach, afterEach, mock } from "bun:test";
 import { HistoryService } from "../src/services/history-service";
+import { logger } from "../src/logger";
 import * as fsPromises from "node:fs/promises";
 import * as fs from "node:fs";
 import { type QuotaData } from "../src/interfaces";
@@ -15,6 +16,8 @@ describe("HistoryService", () => {
         readFileSpy = spyOn(fsPromises, "readFile").mockImplementation(() => Promise.resolve("{}"));
         existsSyncSpy = spyOn(fs, "existsSync").mockImplementation(() => true);
         mkdirSyncSpy = spyOn(fs, "mkdirSync").mockImplementation(() => undefined);
+        spyOn(logger, "error").mockImplementation(() => undefined);
+        spyOn(logger, "debug").mockImplementation(() => undefined);
     });
 
     afterEach(() => {

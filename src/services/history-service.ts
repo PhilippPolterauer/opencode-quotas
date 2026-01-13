@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { type IHistoryService, type HistoryPoint, type QuotaData } from "../interfaces";
+import { logger } from "../logger";
 
 export class HistoryService implements IHistoryService {
     private historyPath: string;
@@ -26,8 +27,7 @@ export class HistoryService implements IHistoryService {
                 this.data = JSON.parse(raw);
             }
         } catch (e) {
-            // If debug log was available we would use it, but console.warn is fine for now
-            // as this service is often initialized before QuotaService config is loaded.
+            logger.error("history-service:init_failed", { path: this.historyPath, error: e });
             this.data = {};
         }
     }
@@ -106,8 +106,9 @@ export class HistoryService implements IHistoryService {
         this.saveTimeout = setTimeout(async () => {
             try {
                 await writeFile(this.historyPath, JSON.stringify(this.data, null, 2), "utf-8");
+                logger.debug("history-service:save_success", { path: this.historyPath });
             } catch (e) {
-                // Silently fail to avoid crashing the main process
+                logger.error("history-service:save_failed", { path: this.historyPath, error: e });
             }
             this.saveTimeout = null;
         }, 5000);
