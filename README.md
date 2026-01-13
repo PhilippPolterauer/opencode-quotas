@@ -1,10 +1,10 @@
-# OpenCode Quotas
+# OpenCode Quotas Plugin
 
-**The ultimate usage dashboard for your AI coding assistants.**
+**The ultimate usage dashboard plugin for your AI coding assistants.**
 
-**OpenCode Quotas** aggregates usage data from Antigravity, Codex, and GitHub Copilot into a single, beautiful dashboard injected directly into your OpenCode chat footer. Never hit a rate limit unexpectedly again.
+**OpenCode Quotas** is an OpenCode.ai plugin that aggregates usage data from Antigravity, Codex, and GitHub Copilot into a single, beautiful dashboard injected directly into your OpenCode chat footer. Never hit a rate limit unexpectedly again.
 
-![OpenCode Quotas Dashboard](docs/QuotaDisplay.png)
+![OpenCode Quotas](docs/QuotaDisplay.png)
 
 > **Note**: This is a community-developed plugin and is not officially affiliated with OpenCode.ai.
 
@@ -18,6 +18,9 @@
 
 ## Installation
 
+### 1. Clone & Build
+Clone the repository into your OpenCode plugins directory and build it:
+
 ```bash
 # Clone into your plugins directory
 git clone https://github.com/your-org/opencode-quotas ~/.opencode/plugins/opencode-quotas
@@ -28,13 +31,25 @@ bun install
 npm run build
 ```
 
+### 2. Register the Plugin
+Add `opencode-quotas` to your OpenCode configuration file (typically `~/.opencode/config.json`) under the `plugins` array:
+
+```json
+{
+  "plugin": [
+    "opencode-antigravity-auth",
+    "opencode-quotas"
+  ]
+}
+```
+
 ## Usage
 
-Once installed, a live quota summary is automatically appended to every assistant message footer.
+Once installed and registered, a live quota summary is automatically appended to every assistant message footer in OpenCode. No further action is required.
 
-### CLI Mode
+### CLI Mode (Optional)
 
-Check quotas directly from your terminal without sending a message:
+You can also use OpenCode Quotas as a standalone CLI tool to check quotas directly from your terminal:
 
 ```bash
 # Show all quotas
