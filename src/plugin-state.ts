@@ -1,25 +1,25 @@
 export class PluginState {
-    private processedMessages = new Set<string>();
+    private static readonly MAX_TRACKED_MESSAGES = 1000;
+    private processedMessages: string[] = [];
+    private processedSet = new Set<string>();
     private locks = new Map<string, Promise<void>>();
 
-    /**
-     * Check if a message has already been processed by this instance.
-     */
     isProcessed(messageId: string): boolean {
-        return this.processedMessages.has(messageId);
+        return this.processedSet.has(messageId);
     }
 
-    /**
-     * Mark a message as processed.
-     */
     markProcessed(messageId: string): void {
-        this.processedMessages.add(messageId);
+        if (this.processedSet.has(messageId)) return;
+
+        this.processedSet.add(messageId);
+        this.processedMessages.push(messageId);
+
+        while (this.processedMessages.length > PluginState.MAX_TRACKED_MESSAGES) {
+            const oldest = this.processedMessages.shift();
+            if (oldest) this.processedSet.delete(oldest);
+        }
     }
 
-    /**
-     * Acquire a lock for a specific message ID.
-     * Returns a release function.
-     */
     async acquireLock(messageId: string): Promise<() => void> {
         const existingLock = this.locks.get(messageId) || Promise.resolve();
         
@@ -28,15 +28,12 @@ export class PluginState {
             resolveLock = resolve;
         });
 
-        // Set the new lock immediately to block subsequent requests
         this.locks.set(messageId, nextLock);
 
-        // Wait for the previous lock to finish
         await existingLock;
 
         return () => {
             resolveLock();
-            // Only delete from the map if we are still the current lock
             if (this.locks.get(messageId) === nextLock) {
                 this.locks.delete(messageId);
             }
