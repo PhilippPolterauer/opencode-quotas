@@ -18,11 +18,17 @@ export const DEFAULT_CONFIG: QuotaConfig = {
         header: true,
     },
     modelMapping: {
-        // Example mapping: "provider:model": ["quota-id"]
-        "antigravity:gemini-flash": ["ag-flash"],
-        "antigravity:gemini-pro": ["ag-pro"],
-        "antigravity:gpt-4": ["ag-premium"],
+        // Example mapping: "provider/model": ["quota-id"]
+        "google/antigravity-gemini-3-flash": ["ag-flash"],
+        "google/antigravity-gemini-3-pro": ["ag-pro"],
+        "google/antigravity-claude-sonnet-4-5": ["ag-premium"],
+        "google/antigravity-claude-sonnet-4-5-thinking": ["ag-premium"],
+        "google/antigravity-claude-opus-4-5-thinking": ["ag-premium"],
+        "antigravity/gemini-flash": ["ag-flash"],
+        "antigravity/gemini-pro": ["ag-pro"],
+        "antigravity/gpt-4": ["ag-premium"],
     },
+    filterByCurrentModel: true,
     groups: {
         antigravity: [
             { name: "Flash", patterns: ["flash"] },

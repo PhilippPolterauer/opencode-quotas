@@ -1,9 +1,21 @@
-import { expect, test, describe, spyOn } from "bun:test";
+import { expect, test, describe, spyOn, afterEach } from "bun:test";
 import { createAntigravityProvider } from "../src/providers/antigravity";
 import * as auth from "../src/providers/antigravity/auth";
 import * as antigravity from "../src/providers/antigravity";
 
 describe("Antigravity Individual Model Configuration", () => {
+  afterEach(() => {
+    // Restore all spies
+    for (const spy of [
+      auth.getCloudCredentials,
+      antigravity.fetchCloudQuota,
+    ]) {
+      if ((spy as any).mockRestore) {
+        (spy as any).mockRestore();
+      }
+    }
+  });
+
   test("renders each model separately when granular groups are provided", async () => {
     // Mock credentials
     spyOn(auth, "getCloudCredentials").mockResolvedValue({

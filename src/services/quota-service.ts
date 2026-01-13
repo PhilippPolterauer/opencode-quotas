@@ -250,7 +250,7 @@ export class QuotaService {
 
         // Model mapping filtering (existing behavior when filterByCurrentModel is false)
         if (context && context.providerId && context.modelId) {
-             const currentModelKey = `${context.providerId}:${context.modelId}`;
+             const currentModelKey = `${context.providerId}/${context.modelId}`;
              if (this.config.modelMapping && this.config.modelMapping[currentModelKey]) {
                 const relevantIds = new Set(this.config.modelMapping[currentModelKey]);
                 results = results.filter(data => relevantIds.has(data.id));
@@ -272,7 +272,7 @@ export class QuotaService {
     private filterByModel(quotas: QuotaData[], providerId: string, modelId: string): QuotaData[] {
         const providerLower = providerId.toLowerCase();
         const modelIdLower = modelId.toLowerCase();
-        const currentModelKey = `${providerId}:${modelId}`;
+        const currentModelKey = `${providerId}/${modelId}`;
 
         // 1) Explicit mapping
         if (this.config.modelMapping && this.config.modelMapping[currentModelKey]) {
@@ -280,16 +280,21 @@ export class QuotaService {
             return quotas.filter(data => relevantIds.has(data.id));
         }
 
-        // 2) Fuzzy token match
+        // 2) Fuzzy token match with scoring
         const tokens = modelIdLower.split(/[^a-z0-9]+/).filter(Boolean);
-        const fuzzyMatches = quotas.filter(q => {
-            const id = q.id.toLowerCase();
-            const name = q.providerName.toLowerCase();
-            return tokens.some(t => id.includes(t) || name.includes(t));
-        });
+        const scoredMatches = quotas
+            .map(q => {
+                const id = q.id.toLowerCase();
+                const name = q.providerName.toLowerCase();
+                const score = tokens.reduce((acc, t) => acc + (id.includes(t) || name.includes(t) ? 1 : 0), 0);
+                return { q, score };
+            })
+            .filter(m => m.score > 0)
+            .sort((a, b) => b.score - a.score);
 
-        if (fuzzyMatches.length > 0) {
-            return fuzzyMatches;
+        if (scoredMatches.length > 0) {
+            const maxScore = scoredMatches[0].score;
+            return scoredMatches.filter(m => m.score === maxScore).map(m => m.q);
         }
 
         // 3) Provider fallback

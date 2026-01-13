@@ -8,17 +8,15 @@
 
 > **Note**: This is a community-developed plugin and is not officially affiliated with OpenCode.ai.
 
-## ✨ Features
+## Features
 
 - **Unified Dashboard**: See all your AI quotas (Antigravity, Codex, Copilot) in one place.
-- **Smart Predictions**: Uses linear regression to predict *exactly* when you'll run out of tokens.
-- **Visual Intelligence**: Beautiful, ANSI-colored progress bars that change color as you approach limits.
-- **Context Aware**: Automatically filters quotas based on the active model (optional).
-- **Resilient**: Failures in one provider won't break your chat experience.
+- **Smart Predictions**: Uses linear regression on usage history to predict when you'll exhaust your quota.
+- **Visual Progress Bars**: ANSI-colored bars that change from green to yellow to red as you approach limits.
+- **Context Aware**: Optionally filter quotas to show only those relevant to the active model.
+- **Resilient**: Provider failures are isolated and won't break your chat experience.
 
-## 📦 Installation
-
-Install seamlessly as an OpenCode plugin:
+## Installation
 
 ```bash
 # Clone into your plugins directory
@@ -30,35 +28,112 @@ bun install
 npm run build
 ```
 
-## 🚀 Usage
+## Usage
 
-Once installed, **you don't need to do anything**.
-
-Every time your AI assistant replies, a live quota summary is appended to the footer of the message.
+Once installed, a live quota summary is automatically appended to every assistant message footer.
 
 ### CLI Mode
-Want to check quotas without sending a message? Run it in your terminal:
+
+Check quotas directly from your terminal without sending a message:
 
 ```bash
-npx opencode-quotas
+# Show all quotas
+opencode-quotas
+
+# Filter by model (simulates what the plugin does automatically)
+opencode-quotas --provider google --model antigravity-gemini-3-flash
 ```
 
-## 🔌 Supported Providers
+> **Tip**: During development, use `bun run opencode-quotas` to run without building.
 
-| Provider | Description |
+## Supported Providers
+
+| Provider | Quota IDs | Description |
+| :--- | :--- | :--- |
+| **Antigravity** | `ag-flash`, `ag-pro`, `ag-premium` | Tracks Flash, Pro, and Premium tiers with reset timers. |
+| **Codex** | `codex-primary`, `codex-secondary`, `codex-smart` | Monitors rate limits and credit balances. |
+| **GitHub Copilot** | — | ⚠️ Not yet implemented. The provider exists but is not wired up. |
+
+> **Note**: Quota IDs are used in configuration options like `disabled` and `modelMapping`.
+
+## Column Reference
+
+| Column | Description |
 | :--- | :--- |
-| **Antigravity** | Tracks Flash, Pro, and Premium tiers with precise reset timers. |
-| **Codex** | Monitors primary and secondary rate limits and credit balances. |
-| **GitHub Copilot** | (Experimental) Tracks monthly suggestions and API limits. |
+| `status` | Health indicator: `OK` (normal), `WRN` (warning), `ERR` (at/over limit) |
+| `name` | Display name of the quota (e.g., "Antigravity Flash") |
+| `bar` | Visual progress bar showing utilization |
+| `percent` | Numeric percentage of quota used |
+| `reset` | Time until the quota resets (e.g., "23m", "1h 30m") |
+| `ettl` | **E**stimated **T**ime **T**o **L**imit - predicted time until quota exhaustion based on usage trends |
+| `value` | Raw used/limit values (e.g., "150/500 credits") |
+| `window` | Rate limit window duration (e.g., "5h window") |
+| `info` | Additional info or alerts (e.g., "unlimited", "!!") |
 
-## ⚙️ Configuration
+## Configuration
 
-Customize the look and feel via `.opencode/quotas.json`.
+All configuration is done via `.opencode/quotas.json` in your project root. Settings apply to both the CLI and plugin.
+
+### Model Filtering
+
+By default, `filterByCurrentModel` is enabled, showing only quotas relevant to the active model.
 
 ```json
 {
-  "footer": true,
-  "progressBar": { "color": true },
+  "filterByCurrentModel": true
+}
+```
+
+**How it works**: The plugin extracts tokens from the model ID (e.g., `antigravity-gemini-3-flash` becomes `["antigravity", "gemini", "3", "flash"]`) and scores each quota by how many tokens match its ID or name. The highest-scoring quotas are displayed.
+
+**Before filtering (all quotas):**
+```text
+ST    QUOTA NAME            USED   UTILIZATION            RESET    ETTL
+---   -------------------   ----   --------------------   ------   -----
+OK    Antigravity Flash      20%   ████░░░░░░░░░░░░░░░░   28m      13m
+OK    Antigravity Premium    40%   ████████░░░░░░░░░░░░   56m      1h 0m
+ERR   Codex Usage           100%   ████████████████████   13h 9m   -
+```
+
+**After filtering (model: `google/antigravity-gemini-3-flash`):**
+```text
+ST    QUOTA NAME          USED   UTILIZATION            RESET   ETTL
+---   -----------------   ----   --------------------   -----   ----
+OK    Antigravity Flash    20%   ████░░░░░░░░░░░░░░░░   28m     13m
+```
+
+### Explicit Model Mapping
+
+For precise control, map model IDs directly to quota IDs:
+
+```json
+{
+  "modelMapping": {
+    "google/antigravity-gemini-3-flash": ["ag-flash"],
+    "google/antigravity-gemini-3-pro": ["ag-pro"],
+    "github-copilot/gpt-4o": ["codex-smart"]
+  }
+}
+```
+
+> **Note**: Model IDs must match the format from `opencode models` (e.g., `provider/model-name`).
+
+### Hide Specific Quotas
+
+Permanently hide quotas you don't care about:
+
+```json
+{
+  "disabled": ["ag-pro", "codex-smart"]
+}
+```
+
+### Smart Aggregation
+
+Combine multiple quotas into a single display row. Useful when a provider has multiple rate limits.
+
+```json
+{
   "aggregatedGroups": [
     {
       "id": "codex-unified",
@@ -70,22 +145,159 @@ Customize the look and feel via `.opencode/quotas.json`.
 }
 ```
 
-See [schemas/quotas.schema.json](schemas/quotas.schema.json) for all options.
+**Aggregation strategies:**
+| Strategy | Description |
+| :--- | :--- |
+| `most_critical` | Shows the quota predicted to hit its limit soonest (requires usage history) |
+| `max` | Shows the quota with highest current usage percentage |
+| `min` | Shows the quota with lowest current usage percentage |
+| `mean` | Displays average usage across all sources |
+| `median` | Displays median usage across all sources |
 
-## 🔒 Security
+## Output Customization
 
-Your credentials remain safe. This plugin uses standard local OAuth flows and stores tokens securely on your machine. No data is sent to third-party servers other than the quota providers themselves.
+All options below work in both CLI and plugin output. ANSI colors only render in terminal environments.
 
-## 💻 Development
+### Select Columns
+
+```json
+{
+  "table": {
+    "columns": ["name", "bar", "percent"]
+  }
+}
+```
+
+```text
+QUOTA NAME            UTILIZATION            USED
+-------------------   --------------------   ----
+Antigravity Flash     ████░░░░░░░░░░░░░░░░    20%
+Antigravity Premium   ████████░░░░░░░░░░░░    40%
+Codex Usage           ████████████████████   100%
+```
+
+### Progress Bar Style
+
+```json
+{
+  "progressBar": {
+    "filledChar": "=",
+    "emptyChar": "-",
+    "width": 10
+  }
+}
+```
+
+```text
+ST    QUOTA NAME            USED   UTILIZATION   RESET
+---   -------------------   ----   -----------   ------
+OK    Antigravity Flash      20%   ==--------    23m
+OK    Antigravity Premium    40%   ====------    51m
+ERR   Codex Usage           100%   ==========    13h 4m
+```
+
+### Show Remaining Capacity
+
+Switch from "used" (default) to "available" mode. This inverts the display—useful if you prefer seeing how much is left:
+
+```json
+{
+  "progressBar": {
+    "show": "available"
+  }
+}
+```
+
+```text
+ST    QUOTA NAME            USED   UTILIZATION            RESET
+---   -------------------   ----   --------------------   ------
+WRN   Antigravity Flash      80%   ████████████████░░░░   23m
+OK    Codex Usage             0%   ░░░░░░░░░░░░░░░░░░░░   13h 4m
+```
+
+> **Note**: In "available" mode, the percentage shows remaining capacity, and status thresholds are inverted.
+
+### Hide Table Header
+
+```json
+{
+  "table": {
+    "header": false
+  }
+}
+```
+
+```text
+OK    Antigravity Flash      20%   ████░░░░░░░░░░░░░░░░   23m      5h 52m
+OK    Antigravity Premium    40%   ████████░░░░░░░░░░░░   51m      1h 2m
+ERR   Codex Usage           100%   ████████████████████   13h 4m   -
+```
+
+### Disable Colors
+
+For plain text output (logging, CI, or non-TTY environments):
+
+```json
+{
+  "progressBar": {
+    "color": false
+  }
+}
+```
+
+### Custom Color Thresholds
+
+Define when colors change based on usage percentage:
+
+```json
+{
+  "progressBar": {
+    "color": true,
+    "gradients": [
+      { "threshold": 0.5, "color": "green" },
+      { "threshold": 0.8, "color": "yellow" },
+      { "threshold": 1.0, "color": "red" }
+    ]
+  }
+}
+```
+
+Available colors: `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, `gray`
+
+## Full Configuration Reference
+
+See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JSON Schema.
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `footer` | boolean | `true` | Show quotas in chat footer |
+| `filterByCurrentModel` | boolean | `true` | Filter quotas by active model |
+| `modelMapping` | object | (see defaults) | Explicit model-to-quota mappings |
+| `disabled` | string[] | `[]` | Quota IDs to hide |
+| `progressBar.color` | boolean | `true` | Enable ANSI colors |
+| `progressBar.width` | number | `20` | Progress bar character width |
+| `progressBar.show` | string | `"used"` | `"used"` or `"available"` |
+| `table.columns` | string[] | (auto) | Columns to display |
+| `table.header` | boolean | `true` | Show column headers |
+| `aggregatedGroups` | array | (see defaults) | Quota aggregation rules |
+| `pollingInterval` | number | `60000` | Refresh interval in ms |
+| `debug` | boolean | `false` | Enable debug logging |
+
+## Security
+
+Your credentials remain safe. This plugin uses standard local OAuth flows and stores tokens securely on your machine (`~/.config/opencode/`). No data is sent to third-party servers other than the quota providers themselves.
+
+## Development
 
 Built with **Bun** for speed.
 
 ```bash
-bun install
-bun test
-npm run build
+bun install        # Install dependencies
+bun test           # Run tests
+npm run build      # Build for production
+bun run opencode-quotas  # Run CLI in dev mode
 ```
 
-## 📄 License
+## License
 
 MIT

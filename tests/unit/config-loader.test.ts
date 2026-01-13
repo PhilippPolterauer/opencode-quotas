@@ -164,7 +164,7 @@ describe("ConfigLoader", () => {
                 join(opencodeDir, "quotas.json"),
                 JSON.stringify({
                     modelMapping: {
-                        "test:model": ["quota-1", "quota-2"]
+                        "test/model": ["quota-1", "quota-2"]
                     }
                 })
             );
@@ -172,7 +172,7 @@ describe("ConfigLoader", () => {
             const initialConfig = ConfigLoader.createConfig();
             const result = await ConfigLoader.loadFromDisk(tempDir, initialConfig);
 
-            expect(result.modelMapping?.["test:model"]).toEqual(["quota-1", "quota-2"]);
+            expect(result.modelMapping?.["test/model"]).toEqual(["quota-1", "quota-2"]);
         });
 
         test("merges table config from user config", async () => {

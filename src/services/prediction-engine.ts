@@ -123,7 +123,11 @@ export class LinearRegressionPredictionEngine implements IPredictionEngine {
  * Used when no history service is available.
  */
 export class NullPredictionEngine implements IPredictionEngine {
-    predictTimeToLimit(): number {
+    predictTimeToLimit(
+        _quotaId: string, 
+        _windowMinutes: number = 60, 
+        _shortWindowMinutes?: number
+    ): number {
         return Infinity;
     }
 }

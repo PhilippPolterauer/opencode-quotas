@@ -154,3 +154,10 @@ export async function getCloudCredentials(): Promise<CloudAuthCredentials> {
     email: activeAccount.email,
   };
 }
+
+/**
+ * Reset the credential cache. Internal use only (primarily for tests).
+ */
+export function resetCredentialCache(): void {
+    cachedCredential = null;
+}

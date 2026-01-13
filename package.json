@@ -22,6 +22,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "opencode-quotas": "bun src/cli.ts",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit"
   },

@@ -4,6 +4,8 @@ import { DEFAULT_CONFIG } from "../defaults";
 import { type QuotaConfig } from "../interfaces";
 import { logger } from "../logger";
 
+import { validatePollingInterval } from "../utils/validation";
+
 /**
  * Configuration loading and merging service.
  * Handles reading config from disk and merging with defaults.
@@ -80,21 +82,23 @@ export class ConfigLoader {
         if (userConfig.footer !== undefined) {
             target.footer = userConfig.footer;
         }
-        if (userConfig.progressBar && userConfig.progressBar.color !== undefined) {
-            if (!target.progressBar) target.progressBar = {};
-            target.progressBar.color = userConfig.progressBar.color;
+        if (userConfig.progressBar) {
+            target.progressBar = { ...target.progressBar, ...userConfig.progressBar };
         }
         if (userConfig.table) {
-            target.table = userConfig.table;
+            target.table = { ...target.table, ...userConfig.table };
         }
         if (userConfig.groups) {
-            target.groups = userConfig.groups;
+            target.groups = { ...target.groups, ...userConfig.groups };
         }
         if (userConfig.disabled) {
             target.disabled = userConfig.disabled;
         }
         if (userConfig.modelMapping) {
             target.modelMapping = userConfig.modelMapping;
+        }
+        if (userConfig.filterByCurrentModel !== undefined) {
+            target.filterByCurrentModel = userConfig.filterByCurrentModel;
         }
         if (userConfig.aggregatedGroups) {
             target.aggregatedGroups = userConfig.aggregatedGroups;
@@ -114,23 +118,16 @@ export class ConfigLoader {
      * Validates and normalizes configuration values.
      */
     private static async validateConfig(config: QuotaConfig): Promise<void> {
-        try {
-            const { validatePollingInterval } = await import("../utils/validation");
-            
-            // Handle pollingInterval from user config
-            const validated = validatePollingInterval(config.pollingInterval as unknown);
-            if (validated === null) {
-                console.warn('[QuotaService] pollingInterval is invalid, using default');
-                config.pollingInterval = DEFAULT_CONFIG.pollingInterval;
-            } else if (validated < 10_000) {
-                console.warn('[QuotaService] pollingInterval below 10s is not recommended');
-                config.pollingInterval = Math.max(validated, 1_000);
-            } else {
-                config.pollingInterval = validated;
-            }
-        } catch (e) {
-            // If validation fails, keep defaults
+        // Handle pollingInterval from user config
+        const validated = validatePollingInterval(config.pollingInterval as unknown);
+        if (validated === null) {
+            console.warn('[QuotaService] pollingInterval is invalid, using default');
             config.pollingInterval = DEFAULT_CONFIG.pollingInterval;
+        } else if (validated < 10_000) {
+            console.warn('[QuotaService] pollingInterval below 10s is not recommended');
+            config.pollingInterval = Math.max(validated, 1_000);
+        } else {
+            config.pollingInterval = validated;
         }
     }
 }

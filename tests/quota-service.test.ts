@@ -48,7 +48,7 @@ describe("QuotaService", () => {
     test("processes quotas with model mapping", () => {
         const service = new QuotaService({
             modelMapping: {
-                "prov:mod": ["quota-1"]
+                "prov/mod": ["quota-1"]
             }
         });
 
