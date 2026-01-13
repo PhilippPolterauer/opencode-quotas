@@ -15,6 +15,16 @@ describe("Progress Bar Rendering", () => {
     expect(parts.labelPart).toContain("Test:");
   });
 
+  test("keeps small decimals (no integer rounding)", () => {
+    const parts = renderQuotaBarParts(2.3, 50, {
+      label: "Dec",
+      unit: "%",
+    });
+
+    // Previously this rounded 2.3 -> 2, making values look like multiples.
+    expect(parts.valuePart).toContain("(2.3/50 %)");
+  });
+
   test("respects custom width", () => {
     const parts = renderQuotaBarParts(5, 10, {
       label: "Small",

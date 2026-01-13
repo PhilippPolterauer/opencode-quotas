@@ -12,7 +12,8 @@ describe("Aggregation Strategies", () => {
             init: async () => {},
             append: async () => {},
             getHistory: (id: string) => historyData[id] || [],
-            setMaxAge: () => {}
+            setMaxAge: () => {},
+            pruneAll: async () => {}
         };
     });
 

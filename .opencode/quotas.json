@@ -1,6 +1,7 @@
 {
     "debug": true,
     "footer": true,
+    "pollingInterval": 10000,
     "progressBar": {
         "color": false
     }

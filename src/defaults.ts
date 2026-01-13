@@ -4,6 +4,7 @@ import { type QuotaConfig } from "./interfaces";
 export const DEFAULT_CONFIG: QuotaConfig = {
     displayMode: "simple",
     footer: true,
+    showFooterTitle: true,
     debug: false,
     progressBar: {
         color: true,
@@ -12,6 +13,9 @@ export const DEFAULT_CONFIG: QuotaConfig = {
             { threshold: 0.8, color: "yellow" },
             { threshold: 1.0, color: "red" },
         ],
+    },
+    table: {
+        header: true,
     },
     modelMapping: {
         // Example mapping: "provider:model": ["quota-id"]
@@ -31,8 +35,9 @@ export const DEFAULT_CONFIG: QuotaConfig = {
             id: "codex-smart",
             name: "Codex Usage",
             sources: ["codex-primary", "codex-secondary"],
-            strategy: "most_critical"
-        }
+            strategy: "most_critical",
+        },
     ],
     historyMaxAgeHours: 24,
+    pollingInterval: 1_000,
 };

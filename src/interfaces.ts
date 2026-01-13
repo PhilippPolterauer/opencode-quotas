@@ -48,48 +48,70 @@ export type QuotaColumn =
   | "status"
   | "ettl";
 
-export interface QuotaConfig {
-  displayMode: QuotaDisplayMode;
-  progressBar?: ProgressBarConfig;
-  table?: {
-      /**
-       * Columns to display in the quota table.
-       * Defaults to a smart selection based on data.
-       */
-      columns?: QuotaColumn[];
-  };
-  /**
-   * Whether to show quotas in the chat footer automatically.
-   * Defaults to true.
-   */
-  footer?: boolean;
-  /**
-   * Optional grouping definitions per provider ID.
-   */
-  groups?: Record<string, QuotaGroup[]>;
-  /**
-   * List of quota IDs to hide from display.
-   */
-  disabled?: string[];
-  /**
-   * Maps a model identifier (e.g., "antigravity:gemini-1.5-flash") to a list
-   * of relevant quota IDs. If provided, the plugin will only show these
-   * quotas for that model.
-   */
-  modelMapping?: Record<string, string[]>;
-  /**
-   * Enable debug logging to ~/.local/share/opencode/quotas-debug.log
-   */
-  debug?: boolean;
-  /**
-   * Optional aggregation groups.
-   */
-  aggregatedGroups?: AggregatedGroup[];
-  /**
-   * Max history age in hours. Defaults to 24.
-   */
-  historyMaxAgeHours?: number;
-}
+ export interface QuotaConfig {
+   displayMode: QuotaDisplayMode;
+   progressBar?: ProgressBarConfig;
+   table?: {
+       /**
+        * Columns to display in the quota table.
+        * Defaults to a smart selection based on data.
+        */
+       columns?: QuotaColumn[];
+       /**
+        * Whether to render the table header row (column labels)
+        */
+       header?: boolean;
+   };
+   /**
+    * Whether to show quotas in the chat footer automatically.
+    * Defaults to true.
+    */
+   footer?: boolean;
+   /**
+    * Whether to show the plugin title/header (bold line) in the footer.
+    * Defaults to true.
+    */
+   showFooterTitle?: boolean;
+   /**
+    * Optional grouping definitions per provider ID.
+    */
+   groups?: Record<string, QuotaGroup[]>;
+   /**
+    * List of quota IDs to hide from display.
+    */
+   disabled?: string[];
+   /**
+    * Maps a model identifier (e.g., "antigravity:gemini-1.5-flash") to a list
+    * of relevant quota IDs. If provided, the plugin will only show these
+    * quotas for that model.
+    */
+   modelMapping?: Record<string, string[]>;
+   /**
+    * Only show quotas relevant to the current model (best-effort matching).
+    * Use modelMapping for precise control.
+    */
+   filterByCurrentModel?: boolean;
+   /**
+    * Enable debug logging to ~/.local/share/opencode/quotas-debug.log
+    */
+   debug?: boolean;
+   /**
+    * Optional aggregation groups.
+    */
+   aggregatedGroups?: AggregatedGroup[];
+   /**
+    * Max history age in hours. Defaults to 24.
+    */
+   historyMaxAgeHours?: number;
+   /**
+    * Polling interval in milliseconds. Defaults to 60000 (1 minute).
+    */
+   pollingInterval?: number;
+   /**
+    * Short time window for regression to capture spikes (minutes). Defaults to 5.
+    */
+   predictionShortWindowMinutes?: number;
+ }
 
 export type AggregationStrategy = 
   | "most_critical" // Predicted time-to-limit (requires history)
@@ -104,6 +126,7 @@ export interface AggregatedGroup {
     sources: string[];       // IDs of quotas to track (e.g. ["codex-primary", "codex-secondary"])
     strategy?: AggregationStrategy; // Defaults to "most_critical"
     predictionWindowMinutes?: number; // Time window for regression (default: 60)
+    predictionShortWindowMinutes?: number; // Short time window for spikes (default: 5)
 }
 
 export interface HistoryPoint {

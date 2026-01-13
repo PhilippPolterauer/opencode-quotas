@@ -1,7 +1,7 @@
 import { expect, test, describe, spyOn } from "bun:test";
 import { createAntigravityProvider } from "../src/providers/antigravity";
-import * as auth from "../src/antigravity/auth";
-import * as cloud from "../src/antigravity/cloud";
+import * as auth from "../src/providers/antigravity/auth";
+import * as antigravity from "../src/providers/antigravity";
 
 describe("Antigravity Individual Model Configuration", () => {
   test("renders each model separately when granular groups are provided", async () => {
@@ -13,7 +13,7 @@ describe("Antigravity Individual Model Configuration", () => {
     });
 
     // Mock cloud response with 3 distinct models using labels
-    spyOn(cloud, "fetchCloudQuota").mockResolvedValue({
+    spyOn(antigravity, "fetchCloudQuota").mockResolvedValue({
       account: {},
       timestamp: Date.now(),
       models: [
@@ -57,7 +57,7 @@ describe("Antigravity Individual Model Configuration", () => {
   });
 
   test("falls back to default categories when groups is undefined", async () => {
-    spyOn(cloud, "fetchCloudQuota").mockResolvedValue({
+    spyOn(antigravity, "fetchCloudQuota").mockResolvedValue({
       account: {},
       timestamp: Date.now(),
       models: [

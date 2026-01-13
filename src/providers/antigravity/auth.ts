@@ -2,9 +2,19 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+/**
+ * PUBLIC OAUTH CREDENTIALS - INTENTIONALLY COMMITTED
+ * 
+ * These are "Installed Application" credentials for Google's Native App OAuth flow.
+ * Per Google's documentation, the client_secret for native applications is NOT
+ * considered confidential. Security relies solely on the user's refresh_token
+ * stored locally in ~/.config/opencode/antigravity-accounts.json.
+ * 
+ * See: https://developers.google.com/identity/protocols/oauth2/native-app
+ */
 const ANTIGRAVITY_CLIENT_ID =
-  "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com";
-const ANTIGRAVITY_CLIENT_SECRET = "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";
+  "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"; // gitleaks:allow
+const ANTIGRAVITY_CLIENT_SECRET = "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"; // gitleaks:allow
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 
 interface StoredAccount {

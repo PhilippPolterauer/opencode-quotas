@@ -1,26 +1,25 @@
-import { expect, test, describe, spyOn, beforeEach, afterEach } from "bun:test";
+import { expect, test, describe, beforeEach, afterEach } from "bun:test";
 import { QuotaService } from "../src/services/quota-service";
-import * as fs from "node:fs";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { join } from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 describe("QuotaService", () => {
-    let readFileSyncSpy: any;
+    let tempDir: string;
 
-    beforeEach(() => {
-        readFileSyncSpy = spyOn(fs, "readFileSync");
+    beforeEach(async () => {
+        tempDir = await mkdtemp(join(tmpdir(), "opencode-quotas-test-"));
     });
 
-    afterEach(() => {
-        readFileSyncSpy.mockRestore();
+    afterEach(async () => {
+        await rm(tempDir, { recursive: true, force: true });
     });
 
     test("loads default configuration when no file exists", async () => {
-        readFileSyncSpy.mockImplementation(() => {
-            throw new Error("File not found");
-        });
-
         const service = new QuotaService();
-        await service.init("/tmp/mock-project");
+        await service.init(tempDir);
 
         const config = service.getConfig();
         expect(config.footer).toBe(true);
@@ -28,19 +27,17 @@ describe("QuotaService", () => {
     });
 
     test("merges user configuration from .opencode/quotas.json", async () => {
-        readFileSyncSpy.mockImplementation((p: string) => {
-            if (p.endsWith("quotas.json")) {
-                return JSON.stringify({
-                    footer: false,
-                    debug: true,
-                    disabled: ["test-quota"]
-                });
-            }
-            throw new Error("File not found");
-        });
+        const opencodeDir = join(tempDir, ".opencode");
+        await fs.mkdir(opencodeDir, { recursive: true });
+        
+        await fs.writeFile(join(opencodeDir, "quotas.json"), JSON.stringify({
+            footer: false,
+            debug: true,
+            disabled: ["test-quota"]
+        }));
 
         const service = new QuotaService();
-        await service.init("/tmp/mock-project");
+        await service.init(tempDir);
 
         const config = service.getConfig();
         expect(config.footer).toBe(false);

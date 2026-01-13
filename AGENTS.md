@@ -11,7 +11,7 @@ This project strictly uses **Bun** as the package manager and runtime for testin
 | **Install**     | `bun install`             | Use Bun for all dependency management.    |
 | **Build**       | `npm run build`           | Compiles TypeScript to `dist/`.           |
 | **Type Check**  | `npm run typecheck`       | Runs `tsc --noEmit`.                      |
-| **Lint**        | `npx prettier --write .`  | Project uses 4-space indent.              |
+| **Format**      | `npx prettier --write .`  | Formats code (4-space indent).            |
 | **Test All**    | `bun test`                | Runs all tests using the Bun test runner. |
 | **Single Test** | `bun test <path_to_file>` | Executes a specific test file.            |
 
@@ -23,22 +23,15 @@ This project strictly uses **Bun** as the package manager and runtime for testin
 - `/src/registry.ts`: Singleton registry for `IQuotaProvider` implementations.
 - `/src/interfaces.ts`: Core type definitions (`QuotaData`, `IQuotaProvider`).
 - `/src/providers/`: Concrete provider implementations (e.g., `antigravity.ts`, `codex.ts`).
-- `/src/ui/`: CLI rendering components (e.g., `progress-bar.ts`).
+- `/src/ui/`: CLI rendering components (`quota-table.ts`, `progress-bar.ts`).
 - `/src/antigravity/`: Logic layer for interacting with Antigravity services.
 
 ## ⚙️ Environment Configuration
 
-The plugin expects certain environment variables or configuration files depending on the provider:
-
 - **Antigravity**: Relies on local configuration files and cloud credentials managed via `src/antigravity/auth.ts`.
 - **Codex**: Typically uses an API key or session token (see `src/providers/codex.ts`).
-
-### Debugging & Configuration
-
-- **Configuration File**: The plugin can be configured via `.opencode/quotas.json`. This file controls debug mode, UI settings, and more.
-- **Debug Logs**: When debug mode is enabled (via `debug: true` in config), logs are written to `~/.local/share/opencode/quotas-debug.log`. These logs contain detailed hook invocation and processing info.
-
-Agents should verify these dependencies before attempting to fetch live data.
+- **Configuration**: The plugin is configured via `.opencode/quotas.json`. This controls debug mode, UI settings, etc.
+- **Debug Logs**: If `debug: true` is set, logs are written to `~/.local/share/opencode/quotas-debug.log`.
 
 ---
 
@@ -48,117 +41,121 @@ Agents should verify these dependencies before attempting to fetch live data.
 
 - **Strict Mode**: `strict: true` is enabled. Avoid `any`. Use `unknown` if necessary.
 - **Interfaces**:
-  - Use `I` prefix for service-like interfaces/contracts (e.g., `IQuotaProvider`, `IQuotaRegistry`).
-  - Do **not** use `I` prefix for plain data structures or objects (e.g., `QuotaData`, `QuotaConfig`).
-- **Explicit Returns**: Always specify return types for public functions and exported methods.
+  - Use `I` prefix for service-like interfaces/contracts (e.g., `IQuotaProvider`).
+  - Do **not** use `I` prefix for plain data structures (e.g., `QuotaData`).
+- **Explicit Returns**: Always specify return types for public functions.
 - **Type Imports**: Use `import type { ... }` or `import { type ... }` for type-only imports.
 
 ### 2. Formatting & Syntax
 
 - **Indentation**: 4 spaces.
 - **Semicolons**: Required.
-- **Quotes**: Use **double quotes** for imports and string literals.
-- **Naming**: `camelCase` for variables/functions, `PascalCase` for classes/plugins, `UPPER_SNAKE_CASE` for global constants.
+- **Quotes**: Double quotes for imports and string literals.
+- **Naming**: `camelCase` for variables/functions, `PascalCase` for classes/types, `UPPER_SNAKE_CASE` for constants.
 
 ---
 
 ## 📐 Design Overview
 
-The plugin follows a **Registry Pattern** to allow decoupling between the main command and various quota sources.
-
-```mermaid
-graph TD
-    User -->|show-quotas| Plugin[QuotaHubPlugin]
-    Plugin --> Registry[QuotaRegistry]
-    Registry -->|getAll| Providers[IQuotaProvider[]]
-    Providers -->|fetchQuota| Data[QuotaData[]]
-    Plugin -->|render| UI[progress-bar.ts]
-```
+The plugin follows a **Registry Pattern** to decouple the main command from quota sources.
 
 ### Core Requirements
-
-1. **Unified Quota View**: Aggregate quotas from Antigravity, Codex, and others.
-2. **Resilience**: A failure in one provider (e.g., network error) must not crash the `show-quotas` command.
+1. **Unified Quota View**: Aggregate quotas from multiple providers.
+2. **Resilience**: A failure in one provider must not crash the command.
 3. **Accuracy**: Handle "Unlimited" quotas and balance-based reporting gracefully.
 4. **Visuals**: Use high-quality ASCII bars for percentage-based limits.
 
 ### Data Flow
-
-1. `init()`: Instantiate and register providers into the `QuotaRegistry`.
-2. `show-quotas`: Retrieve all registered providers, execute `fetchQuota()` in parallel using `Promise.all`, and flatten the results.
-3. Rendering: Sort and display each `QuotaData` entry using the UI utility.
+1. `init()`: Instantiate and register providers into `QuotaRegistry`.
+2. `show-quotas`: Retrieve providers, execute `fetchQuota()` in parallel, flatten results.
+3. Rendering: Display data using `renderQuotaTable`.
 
 ---
 
 ## 🧪 Error Handling
 
-- **Silent Failures**: Providers should catch their own errors and return an empty array or log a warning.
-- **Console Logging**: Use `console.warn` for init issues; `console.log` for user-facing output.
-- **Result Flattening**: `src/index.ts` flattens results. Ensure `fetchQuota()` always returns a `Promise<QuotaData[]>`.
+- **Silent Failures**: Providers should catch errors and return an empty array or log a warning.
+- **Console Logging**: DO NOT use `console.log` for debugging or output. Use `logToDebugFile` instead. `console.warn` is acceptable for initialization warnings.
+- **Result Flattening**: `src/index.ts` flattens results from `fetchQuota()`.
 
 ---
 
 ## 🔒 Concurrency & Safety
 
-- **Duplicate Injection**: The plugin MUST ensure quota blocks are injected exactly once per message, regardless of concurrency levels, retries, or parallel session execution.
-- **Race Conditions**: Use robust locking mechanisms (e.g., `processedMessages` sets and `processingLocks` maps) to prevent race conditions when multiple hooks process the same message ID.
-- **Output Validation**: Before injecting, always verify if the target output text already contains the injection (e.g., check for footer signatures) to handle cases where state might be isolated or cleared.
+- **Duplicate Injection**: Ensure quota blocks are injected exactly once per message.
+- **Race Conditions**: Use locking mechanisms (`processedMessages` set, `processingLocks` map).
+- **Output Validation**: Check if target text already contains the injection.
 
 ---
 
 ## 🧪 Testing Patterns
 
-Tests are located alongside the source or in a dedicated `tests/` directory (if applicable).
-
-- **Mocking**: Use mocks for network requests and shell executions.
-- **Validation**: Ensure `QuotaData` objects conform to the interface defined in `src/interfaces.ts`.
-- **Command**: Run `bun test` to execute the suite.
+- **Runner**: `bun test`
+- **Mocking**: Use mocks for network requests/shell executions.
+- **Validation**: Ensure `QuotaData` objects conform to `src/interfaces.ts`.
 
 ---
 
 ## 🧩 Adding a New Provider
 
-To add a new quota provider (e.g., "GitHub"):
+To add a new provider (e.g., "GitHub"):
 
-1.  **Define the Logic**: Create a file in `src/providers/`.
-2.  **Implement `IQuotaProvider`**:
+1.  **Create File**: Add `src/providers/github.ts`.
+2.  **Implement Factory**: Export a function returning `IQuotaProvider`.
 
     ```typescript
     import { type IQuotaProvider, type QuotaData } from "../interfaces";
 
-    export function createMyProvider(): IQuotaProvider {
+    export function createGitHubProvider(): IQuotaProvider {
       return {
-        id: "my-provider",
+        id: "github-provider",
         fetchQuota: async (): Promise<QuotaData[]> => {
-          // Implementation here
+          // Implementation...
           return [];
         },
       };
     }
     ```
 
-3.  **Register it**: Add it to the `init` method in `src/index.ts`.
+3.  **Register**: Add call to `registry.register(createGitHubProvider())` in `src/index.ts`.
 
 ---
 
 ## 🖥 UI Standards
 
-- Use `renderQuotaBar` in `src/ui/progress-bar.ts` for consistency.
-- **Detailed Reporting**:
-  - Primary line: `[Provider] [Bar] 60% (Used/Limit Unit)`
-  - Secondary lines: Indented with ` └` for metadata.
+- **Main Component**: Use `renderQuotaTable` in `src/ui/quota-table.ts`.
+- **Progress Bars**: Use `renderQuotaBar` in `src/ui/progress-bar.ts`.
+- **Reporting**:
+  - Primary: `[Provider] [Bar] 60% (Used/Limit Unit)`
+  - Secondary: Indented with ` └` for metadata.
 
 ---
 
 ## 🤖 AI Instructions
 
-- **Documentation Mandate**: Whenever you modify the plugin's architecture, add a new provider, or change configuration options, you **MUST** update `DESIGN.md` (for architectural changes) and `README.md` (for user-facing features/usage) in the same task.
-- **Changelog**: Keep `CHANGELOG.md` updated. Add any changes, fixes, or additions to the `[Unreleased]` section.
-- **Bun Usage**: Always use `bun test` and `bun install`.
-- **Refactoring**: Maintain the factory pattern in `src/providers/`.
-- **Dependencies**: Check `package.json` before adding new libs. Prefer Bun/Node built-ins.
-- **Verification**: Run `npm run typecheck` after every modification.
+- **Documentation**: Update `DESIGN.md` and `README.md` when changing architecture or user-facing features.
+- **Changelog**: Update `CHANGELOG.md` (`[Unreleased]` section) with changes.
+- **Bun**: Always use `bun` for install/test.
+- **Dependencies**: Check `package.json` before adding libs. Prefer built-ins.
+- **Verification**: Run `npm run typecheck` after modifications.
+- **Schema**: Update `schemas/quotas.schema.json` if `QuotaConfig` changes.
 
----
+## 🐛 Debugging
 
-_Created on 2026-01-11 for the Opencode.ai Quotas project._
+To debug the plugin and investigate issues (e.g., missing quotas, errors):
+
+1.  **Trigger the Plugin**: Use `opencode run` to execute a command that triggers the plugin hooks.
+    ```bash
+    opencode run say hi
+    ```
+
+2.  **Inspect Plugin Logs**: The plugin writes detailed debug logs to a file in the user's home directory.
+    ```bash
+    tail -f ~/.local/share/opencode/quotas-debug.log
+    ```
+
+3.  **Inspect Process Output**: If you are running the plugin in a dev environment, check the standard output/error of the process running `opencode`.
+
+4.  **Verify Configuration**: Ensure `.opencode/quotas.json` has `debug: true` enabled to see verbose logs.
+
+_Updated on 2026-01-13_

@@ -1,69 +1,83 @@
 import { type Plugin, type Hooks } from "@opencode-ai/plugin";
-import { type AssistantMessage } from "@opencode-ai/sdk";
+import { type AssistantMessage, type UserMessage } from "@opencode-ai/sdk";
 import { QuotaService } from "./services/quota-service";
 import { HistoryService } from "./services/history-service";
 import { renderQuotaTable } from "./ui/quota-table";
 import { type QuotaData } from "./interfaces";
 import { QuotaCache } from "./quota-cache";
-import { appendFile } from "node:fs/promises";
-import { join } from "node:path";
-import { homedir } from "node:os";
-import { inspect } from "node:util";
+import {
+    PLUGIN_FOOTER_SIGNATURE,
+    PLUGIN_MARKER,
+    REASONING_PATTERNS,
+    SKIP_REASONS,
+} from "./constants";
+import { logger } from "./logger";
+import { PluginState } from "./plugin-state";
+import { createQuotaTool } from "./tools/quotas";
 
-// Global deduplication state to prevent double injection across plugin instances
-const processedMessages = new Set<string>();
-const processingLocks = new Map<string, Promise<void>>();
-
-// Helper for debugging
-function logToDebugFile(msg: string, data: any, enabled: boolean) {
-    if (!enabled) return;
-    const logPath = join(homedir(), ".local", "share", "opencode", "quotas-debug.log");
-    const timestamp = new Date().toISOString();
-    const payload = data ? ` ${inspect(data, { depth: null, colors: false, breakLength: Infinity })}` : "";
-    appendFile(logPath, `[${timestamp}] ${msg}${payload}\n`).catch(() => {});
-}
-
-interface ExtendedAssistantMessage extends AssistantMessage {
+/**
+ * Extended message type with additional fields that may be present at runtime.
+ * Uses Omit to override required fields that we know may be optional.
+ */
+type ExtendedAssistantMessage = Omit<AssistantMessage, "parentID"> & {
     type?: string;
-}
+    mode?: string;
+    parentID?: string;
+    modelID?: string;
+    providerID?: string;
+    tokens?: {
+        input?: number;
+        output?: number;
+        reasoning?: number;
+        cache?: { read?: number; write?: number };
+    };
+};
 
 /**
  * QuotaHub Plugin for OpenCode.ai
  */
 export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
+    const state = new PluginState();
     const historyService = new HistoryService();
-    // Do not await init here to avoid blocking plugin startup
-    // await historyService.init();
-
     const quotaService = new QuotaService();
-    // await quotaService.init(directory, historyService);
-
-    // Initial config (defaults)
-    let config = quotaService.getConfig();
-    const debugLog = (msg: string, data?: any) => logToDebugFile(msg, data, !!config.debug);
 
     let quotaCache: QuotaCache | undefined;
+    let initPromise: Promise<void> | undefined;
 
-    // Background initialization
-    const initPromise = (async () => {
-        try {
-            await historyService.init();
-            await quotaService.init(directory, historyService);
-            
-            // Refresh config after init
-            config = quotaService.getConfig();
-            
-            const providers = quotaService.getProviders();
-            quotaCache = new QuotaCache(providers, {
-                refreshIntervalMs: 60_000,
-                historyService,
-            });
-            quotaCache.start();
-            debugLog("init:complete");
-        } catch (e) {
-            console.error("Failed to initialize QuotaHubPlugin:", e);
-        }
-    })();
+    // Dedicated initialization function
+    const ensureInit = async (): Promise<void> => {
+        if (initPromise) return initPromise;
+
+        initPromise = (async () => {
+            try {
+                await historyService.init();
+                await quotaService.init(directory, historyService);
+
+                const config = quotaService.getConfig();
+                const providers = quotaService.getProviders();
+                logger.debug("init:providers", {
+                    ids: providers.map((p) => p.id),
+                    count: providers.length,
+                });
+                quotaCache = new QuotaCache(providers, {
+                    refreshIntervalMs: config.pollingInterval ?? 60_000,
+                    historyService,
+                    debug: !!config.debug,
+                });
+                quotaCache.start();
+                logger.debug("init:complete");
+            } catch (e) {
+                console.error("Failed to initialize QuotaHubPlugin:", e);
+                // Keep the promise but it failed. Future calls will see it as failed.
+                throw e;
+            }
+        })();
+
+        return initPromise;
+    };
+
+    // Trigger background initialization
+    ensureInit().catch(() => {});
 
     const hooks: Hooks = {
         /**
@@ -81,44 +95,77 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
             },
         ): Promise<void> => {
             // Ensure initialization is complete before processing
+            await ensureInit().catch((e) => {
+                logger.error("init:error", { error: e });
+            });
             if (!quotaCache) {
-                await initPromise;
+                const config = quotaService.getConfig();
+                if (config.debug)
+                    logger.debug("hook:no_cache", {
+                        messageID: input.messageID,
+                    });
+                return;
             }
-            if (!quotaCache) return;
-            const cache = quotaCache; // Capture valid reference
 
-            if (config.footer === false) return;
-            
+            const cache = quotaCache;
+            const config = quotaService.getConfig();
+            const debugLog = (msg: string, data?: any) => {
+                if (config.debug) logger.debug(msg, data);
+            };
+
+            if (config.footer === false) {
+                debugLog("skip:footer_disabled", {
+                    messageID: input.messageID,
+                });
+                return;
+            }
+
             // Log hook invocation
-            debugLog("hook:experimental.text.complete", { 
-                input, 
-                processed: processedMessages.has(input.messageID) 
+            debugLog("hook:experimental.text.complete", {
+                input,
+                processed: state.isProcessed(input.messageID),
             });
 
             // Fast path check
-            if (processedMessages.has(input.messageID)) return;
-            
-            // Secondary safeguard: check if footer already present
-            if (output.text.includes("**Opencode Quotas")) {
-                 debugLog("skip:footer_present", { messageID: input.messageID });
-                 processedMessages.add(input.messageID);
-                 return;
+            if (state.isProcessed(input.messageID)) {
+                debugLog("skip:already_processed", {
+                    messageID: input.messageID,
+                });
+                return;
             }
 
-            // Wait for any existing processing to finish
-            while (processingLocks.has(input.messageID)) {
-                await processingLocks.get(input.messageID);
-                // After waking up, check if another process handled it
-                if (processedMessages.has(input.messageID)) return;
-                // Double-check text content in case another process injected it
-                if (output.text.includes("**Opencode Quotas")) {
-                    processedMessages.add(input.messageID);
+            // Secondary safeguard: check if footer already present (using invisible marker)
+            if (output.text.includes(PLUGIN_MARKER)) {
+                debugLog(SKIP_REASONS.FOOTER_PRESENT, {
+                    messageID: input.messageID,
+                });
+                state.markProcessed(input.messageID);
+                return;
+            }
+
+            debugLog("lock:acquire_start", { messageID: input.messageID });
+            // Acquire lock for this message
+            const release = await state.acquireLock(input.messageID);
+            debugLog("lock:acquired", { messageID: input.messageID });
+
+            try {
+                // After acquiring lock, re-check if processed
+                if (state.isProcessed(input.messageID)) {
+                    debugLog("skip:already_processed_after_lock", {
+                        messageID: input.messageID,
+                    });
                     return;
                 }
-            }
 
-            // Create a processing task
-            const processTask = async () => {
+                // Double-check text content in case another process injected it while we waited for lock
+                if (output.text.includes(PLUGIN_MARKER)) {
+                    debugLog("skip:footer_present_after_lock", {
+                        messageID: input.messageID,
+                    });
+                    state.markProcessed(input.messageID);
+                    return;
+                }
+
                 // Fetch message to check role
                 const { data: result } = await client.session.message({
                     path: {
@@ -128,12 +175,20 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 });
 
                 if (!result || result.info.role !== "assistant") {
-                    processedMessages.add(input.messageID);
+                    debugLog("skip:not_assistant", {
+                        messageID: input.messageID,
+                        role: result?.info?.role,
+                    });
+                    state.markProcessed(input.messageID);
                     return;
                 }
 
                 const assistantMsg = result.info as ExtendedAssistantMessage;
-                
+
+                // Mark as processed as soon as we've identified it's an assistant message
+                // We do this before the quota check to avoid race conditions if no quotas are found.
+                state.markProcessed(input.messageID);
+
                 // Log message details
                 debugLog("message:details", {
                     id: input.messageID,
@@ -141,14 +196,42 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                     tokens: assistantMsg.tokens,
                     type: assistantMsg.type,
                     modelID: assistantMsg.modelID,
-                    providerID: assistantMsg.providerID
+                    providerID: assistantMsg.providerID,
                 });
 
-                // Skip if it's a subagent mode (thinking step)
+                // Skip if it's a subagent mode (thinking step), unless it's a whitelisted agent (plan/build)
                 if (assistantMsg.mode === "subagent") {
-                    debugLog("skip:subagent");
-                    processedMessages.add(input.messageID);
-                    return;
+                    let allowed = false;
+                    if (assistantMsg.parentID) {
+                        try {
+                            const { data: parentResult } =
+                                await client.session.message({
+                                    path: {
+                                        id: input.sessionID,
+                                        messageID: assistantMsg.parentID,
+                                    },
+                                });
+
+                            if (parentResult?.info?.role === "user") {
+                                const userMsg =
+                                    parentResult.info as UserMessage;
+                                // Allow plan and build agents even in subagent mode
+                                if (["plan", "build"].includes(userMsg.agent)) {
+                                    allowed = true;
+                                    debugLog("allow:subagent_exception", {
+                                        agent: userMsg.agent,
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                            debugLog("error:check_parent_agent", e);
+                        }
+                    }
+
+                    if (!allowed) {
+                        debugLog(SKIP_REASONS.SUBAGENT);
+                        return;
+                    }
                 }
 
                 // Skip reasoning messages (explicit mode or type)
@@ -156,48 +239,47 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                     assistantMsg.mode === "reasoning" ||
                     assistantMsg.type === "reasoning"
                 ) {
-                    debugLog("skip:reasoning_mode");
-                    processedMessages.add(input.messageID);
+                    debugLog(SKIP_REASONS.REASONING);
                     return;
                 }
 
                 // Skip if it appears to be a reasoning-only message based on tokens
-                // Heuristic: If output tokens are 0 but reasoning tokens exist, or equal.
+                const reasoningTokens = assistantMsg.tokens?.reasoning ?? 0;
+                const outputTokens = assistantMsg.tokens?.output ?? 0;
                 if (
                     assistantMsg.tokens &&
-                    assistantMsg.tokens.reasoning > 0 &&
-                    (assistantMsg.tokens.output === 0 ||
-                        assistantMsg.tokens.output === assistantMsg.tokens.reasoning)
+                    reasoningTokens > 0 &&
+                    (outputTokens === 0 || outputTokens === reasoningTokens)
                 ) {
-                    debugLog("skip:reasoning_tokens", assistantMsg.tokens);
-                    processedMessages.add(input.messageID);
+                    debugLog(SKIP_REASONS.REASONING, assistantMsg.tokens);
                     return;
                 }
-                
-                // Heuristic: Check if text starts with "Thinking:" or similar which indicates a reasoning block
-                // that might not be tagged correctly in metadata.
+
+                // Heuristic: Check if text starts with "Thinking:" or similar
                 const trimmedText = output.text.trim();
-                
-                // 1. XML-style thinking tags
-                if (trimmedText.startsWith("<thinking>") || trimmedText.startsWith("<antThinking>")) {
-                    debugLog("skip:thinking_xml_tag");
-                    processedMessages.add(input.messageID);
-                    return;
+                for (const pattern of REASONING_PATTERNS) {
+                    if (pattern.test(trimmedText)) {
+                        debugLog(SKIP_REASONS.REASONING, {
+                            pattern: pattern.toString(),
+                        });
+                        return;
+                    }
                 }
-
-                // 2. Common headers followed by newline or strictly at start
-                if (trimmedText.match(/^(Thinking|Reasoning|Analysis):\s*(\n|$)/i)) {
-                    debugLog("skip:thinking_header_heuristic");
-                    processedMessages.add(input.messageID);
-                    return;
-                }
-
-                // Mark as processed to prevent double-printing
-                processedMessages.add(input.messageID);
 
                 const snapshot = cache.getSnapshot();
                 const rawResults: QuotaData[] = snapshot.data;
-                if (rawResults.length === 0) return;
+                debugLog("cache:snapshot", {
+                    fetchedAt: snapshot.fetchedAt?.toISOString(),
+                    totalCount: rawResults.length,
+                    hasError: !!snapshot.lastError,
+                });
+                if (rawResults.length === 0) {
+                    debugLog("skip:no_cached_quotas", {
+                        fetchedAt: snapshot.fetchedAt?.toISOString(),
+                        lastError: snapshot.lastError,
+                    });
+                    return;
+                }
 
                 // Process (filter, sort) using the shared service
                 const filteredResults = quotaService.processQuotas(rawResults, {
@@ -205,7 +287,20 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                     modelId: assistantMsg.modelID,
                 });
 
-                if (filteredResults.length === 0) return;
+                debugLog("quotas:processed", {
+                    before: rawResults.length,
+                    after: filteredResults.length,
+                    providerId: assistantMsg.providerID,
+                    modelId: assistantMsg.modelID,
+                });
+
+                if (filteredResults.length === 0) {
+                    debugLog("skip:all_quotas_filtered", {
+                        providerId: assistantMsg.providerID,
+                        modelId: assistantMsg.modelID,
+                    });
+                    return;
+                }
 
                 const lines = renderQuotaTable(filteredResults, {
                     progressBarConfig: config.progressBar,
@@ -214,40 +309,36 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
 
                 // Append to message text
                 const showMode = config.progressBar?.show ?? "used";
-                const modeLabel = showMode === "available" ? "(Remaining)" : "(Used)";
-                const footerHeader = `**Opencode Quotas ${modeLabel}**`;
-                
-                // Final safety check before modification
-                if (output.text.includes("**Opencode Quotas")) return;
+                const modeLabel =
+                    showMode === "available" ? "(Remaining)" : "(Used)";
+                // Build visible header only if enabled in config
+                const showTitle = config.showFooterTitle !== false;
+                const titleText = showTitle
+                    ? `${PLUGIN_FOOTER_SIGNATURE} ${modeLabel}**\n`
+                    : "";
 
-                const quotedLines = lines;
-                
-                output.text += "\n\n" + `${footerHeader}\n` + quotedLines.join("\n");
-            };
-
-            // Register and execute the task
-            let resolveLock: () => void = () => {};
-            const lockPromise = new Promise<void>((resolve) => {
-                resolveLock = resolve;
-            });
-
-            // Double-check locking to handle any potential race conditions
-            if (processingLocks.has(input.messageID)) {
-                await processingLocks.get(input.messageID);
-                if (processedMessages.has(input.messageID)) return;
-            }
-
-            processingLocks.set(input.messageID, lockPromise);
-
-            try {
-                await processTask();
+                // Append invisible dedup marker and table lines
+                output.text +=
+                    "\n\n" +
+                    titleText +
+                    PLUGIN_MARKER +
+                    "\n" +
+                    lines.join("\n");
+                debugLog("inject:footer", {
+                    messageID: input.messageID,
+                    lines: lines.length,
+                });
             } finally {
-                resolveLock();
-                processingLocks.delete(input.messageID);
+                debugLog("lock:release", { messageID: input.messageID });
+                release();
             }
         },
     };
 
+    // Create the quota tool that can be called by the LLM
+    const quotaTool = createQuotaTool(quotaService, () =>
+        quotaService.getConfig(),
+    );
+
     return hooks;
 };
-

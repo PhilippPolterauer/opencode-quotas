@@ -6,6 +6,7 @@ import { getQuotaRegistry } from "../registry";
 import { createAntigravityProvider } from "../providers/antigravity";
 import { createCodexProvider } from "../providers/codex";
 import { formatDurationMs } from "../utils/time";
+import { logger } from "../logger";
 
 export class QuotaService {
     private config: QuotaConfig;
@@ -44,7 +45,13 @@ export class QuotaService {
                 // Merge user config
                 if (userConfig.debug !== undefined) {
                     this.config.debug = userConfig.debug;
+                    logger.setDebug(!!this.config.debug);
                 }
+
+                logger.debug(
+                    "init:config_loaded",
+                    { configPath, debug: this.config.debug },
+                );
                 if (userConfig.footer !== undefined) {
                     this.config.footer = userConfig.footer;
                 }
@@ -70,9 +77,19 @@ export class QuotaService {
                 if (userConfig.historyMaxAgeHours !== undefined) {
                     this.config.historyMaxAgeHours = userConfig.historyMaxAgeHours;
                 }
+                if (userConfig.pollingInterval !== undefined) {
+                    this.config.pollingInterval = userConfig.pollingInterval;
+                }
+                if (userConfig.predictionShortWindowMinutes !== undefined) {
+                    this.config.predictionShortWindowMinutes = userConfig.predictionShortWindowMinutes;
+                }
 
             } catch (e) {
                 // Ignore missing config or parse errors
+                logger.error(
+                    "init:config_load_failed",
+                    { error: e },
+                );
             }
 
             if (this.historyService && this.config.historyMaxAgeHours !== undefined) {
@@ -84,16 +101,24 @@ export class QuotaService {
             // Register Antigravity
             try {
                 const agGroups = this.config.groups?.antigravity;
-                registry.register(createAntigravityProvider(agGroups));
+                registry.register(
+                    createAntigravityProvider(agGroups, {
+                        debug: !!this.config.debug,
+                    }),
+                );
+                logger.debug("init:provider_registered", { id: "antigravity" });
             } catch (e) {
+                logger.error("init:provider_failed", { id: "antigravity", error: e });
                 console.warn("[QuotaService] Failed to initialize Antigravity provider:", e);
             }
 
             // Register Codex
             try {
                 registry.register(createCodexProvider());
+                logger.debug("init:provider_registered", { id: "codex" });
             } catch (e) {
-                 console.warn("[QuotaService] Failed to initialize Codex provider:", e);
+                logger.error("init:provider_failed", { id: "codex", error: e });
+                console.warn("[QuotaService] Failed to initialize Codex provider:", e);
             }
 
             this.initialized = true;
@@ -112,33 +137,69 @@ export class QuotaService {
 
     async getQuotas(context?: { providerId?: string; modelId?: string }): Promise<QuotaData[]> {
         const providers = this.getProviders();
+
+        logger.debug(
+            "quota_service:get_quotas_start",
+            { providerCount: providers.length, ids: providers.map((p) => p.id) },
+        );
         
         if (providers.length === 0) return [];
 
         const results = await Promise.all(
             providers.map(async (p: IQuotaProvider) => {
+                const startedAt = Date.now();
                 try {
-                    return await p.fetchQuota();
+                    logger.debug(
+                        "quota_service:provider_fetch_start",
+                        { id: p.id },
+                    );
+                    const result = await p.fetchQuota();
+                    logger.debug(
+                        "quota_service:provider_fetch_ok",
+                        { id: p.id, count: result.length, durationMs: Date.now() - startedAt },
+                    );
+                    return result;
                 } catch (e) {
+                    logger.error(
+                        "quota_service:provider_fetch_error",
+                        { id: p.id, durationMs: Date.now() - startedAt, error: e },
+                    );
                     console.error(`Provider ${p.id} failed:`, e);
                     return [];
                 }
             })
         );
 
-        return this.processQuotas(results.flat(), context);
+        const processed = this.processQuotas(results.flat(), context);
+        logger.debug(
+            "quota_service:get_quotas_end",
+            { totalCount: processed.length },
+        );
+        return processed;
     }
 
     processQuotas(data: QuotaData[], context?: { providerId?: string; modelId?: string }): QuotaData[] {
         let results = [...data];
 
-        // 1. Apply Aggregation
+        // 1. Enrich with predictions (before aggregation so sources have it too)
+        results = results.map(q => {
+            const time = this.predictTimeToLimit(q.id, 60);
+            if (time !== Infinity) {
+                return {
+                    ...q,
+                    predictedReset: `${formatDurationMs(time)} (predicted)`
+                };
+            }
+            return q;
+        });
+
+        // 2. Apply Aggregation
         results = this.applyAggregation(results);
 
-        // 2. Filter (Disabled & Model Mapping)
+        // 3. Filter (Disabled & Model Mapping). If requested, perform model-strict filtering.
         results = this.filterQuotas(results, context);
 
-        // 3. Sort
+        // 4. Sort
         results = this.sortQuotas(results);
 
         return results;
@@ -159,8 +220,13 @@ export class QuotaService {
             let representative: QuotaData | null = null;
 
             if (strategy === "most_critical") {
-                representative = this.aggregateMostCritical(sourceQuotas, group.predictionWindowMinutes);
+                representative = this.aggregateMostCritical(
+                    sourceQuotas, 
+                    group.predictionWindowMinutes,
+                    group.predictionShortWindowMinutes
+                );
             } else if (strategy === "max") {
+
                 representative = this.aggregateMax(sourceQuotas);
             } else if (strategy === "min") {
                 representative = this.aggregateMin(sourceQuotas);
@@ -185,12 +251,12 @@ export class QuotaService {
         return results;
     }
 
-    private aggregateMostCritical(quotas: QuotaData[], windowMinutes: number = 60): QuotaData | null {
+    private aggregateMostCritical(quotas: QuotaData[], windowMinutes: number = 60, shortWindowMinutes?: number): QuotaData | null {
         let minTime = Infinity;
         let representative: QuotaData | null = null;
 
         for (const q of quotas) {
-            const time = this.predictTimeToLimit(q.id, windowMinutes);
+            const time = this.predictTimeToLimit(q.id, windowMinutes, shortWindowMinutes);
             if (time < minTime) {
                 minTime = time;
                 representative = q;
@@ -253,7 +319,45 @@ export class QuotaService {
         const disabledIds = new Set(this.config.disabled || []);
         results = results.filter((data) => !disabledIds.has(data.id));
 
-        // Model mapping filtering
+        // If requested, apply model-aware filtering
+        if (this.config.filterByCurrentModel && context && context.providerId && context.modelId) {
+            const providerLower = context.providerId.toLowerCase();
+            const modelIdLower = context.modelId.toLowerCase();
+
+            // 1) Explicit mapping
+            const currentModelKey = `${context.providerId}:${context.modelId}`;
+            if (this.config.modelMapping && this.config.modelMapping[currentModelKey]) {
+                const relevantIds = new Set(this.config.modelMapping[currentModelKey]);
+                results = results.filter(data => relevantIds.has(data.id));
+                return results;
+            }
+
+            // 2) Fuzzy token match: split model id to tokens and check if any token appears in quota id or providerName
+            const tokens = modelIdLower.split(/[^a-z0-9]+/).filter(Boolean);
+            const fuzzyMatches = results.filter(q => {
+                const id = q.id.toLowerCase();
+                const name = q.providerName.toLowerCase();
+                return tokens.some(t => id.includes(t) || name.includes(t));
+            });
+
+            if (fuzzyMatches.length > 0) {
+                results = fuzzyMatches;
+                return results;
+            }
+
+            // 3) Provider fallback: show only quotas for same provider
+            const matchesProvider = results.filter(q => q.providerName.toLowerCase().includes(providerLower));
+            if (matchesProvider.length > 0) {
+                results = matchesProvider;
+            } else {
+                // No matches at all; return empty to indicate strict filtering
+                results = [];
+            }
+
+            return results;
+        }
+
+        // Model mapping filtering (existing behavior when filterByCurrentModel is false)
         if (context && context.providerId && context.modelId) {
              const currentModelKey = `${context.providerId}:${context.modelId}`;
              if (this.config.modelMapping && this.config.modelMapping[currentModelKey]) {
@@ -279,40 +383,11 @@ export class QuotaService {
     }
 
     /**
-     * Predicts time to limit in milliseconds using linear regression.
-     * Returns Infinity if usage is decreasing or stable at 0.
+     * Calculates the slope (usage per ms) using linear regression for the given history points.
      */
-    private predictTimeToLimit(quotaId: string, windowMinutes: number = 60): number {
-        if (!this.historyService) return Infinity;
+    private calculateSlope(history: { timestamp: number; used: number }[]): number {
+        if (history.length < 2) return 0;
 
-        const windowMs = windowMinutes * 60 * 1000;
-        let history = this.historyService.getHistory(quotaId, windowMs);
-
-        // Fallback: If 1-hour history is not possible (insufficient data or gaps),
-        // use the oldest time point available.
-        const currentSpan = history.length >= 2 
-            ? history[history.length - 1].timestamp - history[0].timestamp
-            : 0;
-            
-        // If we have less than 2 points, OR the span is significantly less than the requested window
-        // (e.g. < 90%), try to fetch the full history to find older points.
-        if (history.length < 2 || currentSpan < windowMs * 0.9) {
-            // Fetch everything (up to ~30 days, essentially unlimited relative to cache size)
-            const fullHistory = this.historyService.getHistory(quotaId, 30 * 24 * 60 * 60 * 1000);
-            
-            // Only switch if we actually found more useful data
-            // (either more points, or an older start time)
-            if (fullHistory.length > history.length) {
-                history = fullHistory;
-            } else if (fullHistory.length > 0 && history.length > 0 && 
-                       fullHistory[0].timestamp < history[0].timestamp) {
-                history = fullHistory;
-            }
-        }
-
-        if (history.length < 2) return Infinity;
-
-        // Simple linear regression: y = mx + b
         let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
         const n = history.length;
         const firstTimestamp = history[0].timestamp;
@@ -327,18 +402,60 @@ export class QuotaService {
         }
 
         const denominator = (n * sumX2 - sumX * sumX);
-        if (denominator === 0) return Infinity;
+        if (denominator === 0) return 0;
 
-        const m = (n * sumXY - sumX * sumY) / denominator; // Slope (usage per ms)
-        
-        if (m <= 0) return Infinity; // Usage is not increasing
+        return (n * sumXY - sumX * sumY) / denominator;
+    }
 
+    /**
+     * Predicts time to limit in milliseconds using a dual-window linear regression approach.
+     * Returns Infinity if usage is decreasing, stable, or idle.
+     */
+    private predictTimeToLimit(quotaId: string, windowMinutes: number = 60, shortWindowMinutes?: number): number {
+        if (!this.historyService) return Infinity;
+
+        const longWindowMs = windowMinutes * 60 * 1000;
+        const shortWindowMin = shortWindowMinutes ?? this.config.predictionShortWindowMinutes ?? 5;
+        const shortWindowMs = shortWindowMin * 60 * 1000;
+
+        const history = this.historyService.getHistory(quotaId, longWindowMs);
+        if (history.length < 2) return Infinity;
+
+        // Idle Handling: If the last history point is older than 5 minutes, assume usage has stopped.
         const lastPoint = history[history.length - 1];
+        const now = Date.now();
+        if (now - lastPoint.timestamp > 5 * 60 * 1000) {
+            return Infinity;
+        }
+
+        // Long Slope
+        const mLong = this.calculateSlope(history);
+
+        // Short Slope: most recent 15% of data points or last 5 minutes (whichever contains sufficient data).
+        // For simplicity and following the 5-min instruction:
+        const shortHistory = history.filter(p => p.timestamp > now - shortWindowMs);
+        
+        // Ensure we have enough points in short history, or take the last 15%
+        let effectiveShortHistory = shortHistory;
+        if (effectiveShortHistory.length < 2) {
+            const fifteenPercentCount = Math.max(2, Math.ceil(history.length * 0.15));
+            effectiveShortHistory = history.slice(-fifteenPercentCount);
+        }
+
+        const mShort = this.calculateSlope(effectiveShortHistory);
+
+        // Conservative Estimation: use the maximum slope
+        const m = Math.max(mLong, mShort);
+        
+        if (m <= 0) return Infinity;
         if (lastPoint.limit === null) return Infinity;
 
         const remaining = lastPoint.limit - lastPoint.used;
-        if (remaining <= 0) return 0; // Already hit limit
+        if (remaining <= 0) return 0;
 
-        return remaining / m; // ms until limit
+        const msFromLastPoint = remaining / m;
+        const elapsedSinceLastPoint = now - lastPoint.timestamp;
+        
+        return Math.max(0, msFromLastPoint - elapsedSinceLastPoint);
     }
 }

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { type IQuotaProvider, type QuotaData } from "../interfaces";
+import { logToDebugFile } from "../utils/debug";
 
 const AUTH_PATH = join(homedir(), ".local", "share", "opencode", "auth.json");
 const DEFAULT_BASE_URL = "https://chatgpt.com/backend-api";
@@ -65,7 +66,12 @@ async function readAuthFile(): Promise<AuthFile | null> {
     const raw = await readFile(AUTH_PATH, "utf8");
     const parsed = JSON.parse(raw) as AuthFile;
     return parsed;
-  } catch {
+  } catch (e) {
+    logToDebugFile(
+      "provider:codex:auth_read_failed",
+      { authPath: AUTH_PATH, error: e },
+      process.env.OPENCODE_QUOTAS_DEBUG === "1",
+    );
     return null;
   }
 }
@@ -282,13 +288,29 @@ export function createCodexProvider(): IQuotaProvider {
   return {
     id: "codex",
     async fetchQuota(): Promise<QuotaData[]> {
+      logToDebugFile(
+        "provider:codex:fetch_start",
+        { authPath: AUTH_PATH },
+        process.env.OPENCODE_QUOTAS_DEBUG === "1",
+      );
+
       const auth = await readAuthFile();
       if (!auth) {
+        logToDebugFile(
+          "provider:codex:no_auth",
+          { authPath: AUTH_PATH },
+          process.env.OPENCODE_QUOTAS_DEBUG === "1",
+        );
         throw new Error("Codex auth.json not found");
       }
 
       const oauth = pickOauthAuth(auth);
       if (!oauth) {
+        logToDebugFile(
+          "provider:codex:no_oauth",
+          { availableProviders: Object.keys(auth) },
+          process.env.OPENCODE_QUOTAS_DEBUG === "1",
+        );
         throw new Error("Codex OAuth credentials missing");
       }
 
@@ -297,8 +319,20 @@ export function createCodexProvider(): IQuotaProvider {
         oauth.enterpriseUrl ??
         DEFAULT_BASE_URL;
 
+      logToDebugFile(
+        "provider:codex:request",
+        { providerID: oauth.providerID, baseUrl, url: buildUsageUrl(baseUrl) },
+        process.env.OPENCODE_QUOTAS_DEBUG === "1",
+      );
+
       const payload = await fetchQuotaPayload(oauth.access, baseUrl);
       const entries = extractCodexQuota(payload);
+
+      logToDebugFile(
+        "provider:codex:parse",
+        { count: entries.length },
+        process.env.OPENCODE_QUOTAS_DEBUG === "1",
+      );
 
       if (entries.length === 0) {
         throw new Error("Codex quota payload did not include rate limits");

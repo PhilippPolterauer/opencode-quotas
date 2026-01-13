@@ -23,13 +23,13 @@ describe("Quota Configuration and Filtering", () => {
     // We'll test the builder logic directly or via the mock
     const {
       createAntigravityProvider,
+      fetchCloudQuota,
     } = require("../src/providers/antigravity");
-    const { getCloudCredentials } = require("../src/antigravity/auth");
-    const { fetchCloudQuota } = require("../src/antigravity/cloud");
+    const { getCloudCredentials } = require("../src/providers/antigravity/auth");
     const { spyOn } = require("bun:test");
 
     const mockFetch = spyOn(
-      require("../src/antigravity/cloud"),
+      require("../src/providers/antigravity"),
       "fetchCloudQuota",
     ).mockResolvedValue({
       models: [
@@ -42,7 +42,7 @@ describe("Quota Configuration and Filtering", () => {
     });
 
     spyOn(
-      require("../src/antigravity/auth"),
+      require("../src/providers/antigravity/auth"),
       "getCloudCredentials",
     ).mockResolvedValue({
       accessToken: "token",

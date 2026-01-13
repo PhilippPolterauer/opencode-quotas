@@ -1,5 +1,7 @@
 import { type IQuotaProvider, type QuotaData, type IHistoryService } from "./interfaces";
 
+import { logger } from "./logger";
+
 type CachedQuotas = {
     data: QuotaData[];
     fetchedAt: Date | null;
@@ -9,6 +11,7 @@ type CachedQuotas = {
 type QuotaCacheOptions = {
     refreshIntervalMs: number;
     historyService?: IHistoryService;
+    debug?: boolean;
 };
 
 const DEFAULT_OPTIONS: QuotaCacheOptions = {
@@ -56,6 +59,14 @@ export class QuotaCache {
     }
 
     public async refresh(): Promise<void> {
+        logger.debug(
+            "cache:refresh_start",
+            {
+                providerCount: this.providers.length,
+                refreshIntervalMs: this.options.refreshIntervalMs,
+                inFlight: !!this.inFlight,
+            },
+        );
         if (this.inFlight) {
             return this.inFlight;
         }
@@ -64,10 +75,32 @@ export class QuotaCache {
             try {
                 const results = await Promise.all(
                     this.providers.map(async (p: IQuotaProvider) => {
+                        const startedAt = Date.now();
                         try {
-                            return await p.fetchQuota();
+                            logger.debug(
+                                "cache:provider_fetch_start",
+                                { id: p.id },
+                            );
+                            const result = await p.fetchQuota();
+                            logger.debug(
+                                "cache:provider_fetch_ok",
+                                {
+                                    id: p.id,
+                                    count: result.length,
+                                    durationMs: Date.now() - startedAt,
+                                },
+                            );
+                            return result;
                         } catch (e) {
-                            console.debug(`[QuotaHub] Provider ${p.id} fetch failed:`, e);
+                            logger.error(
+                                "cache:provider_fetch_error",
+                                {
+                                    id: p.id,
+                                    durationMs: Date.now() - startedAt,
+                                    error: e,
+                                },
+                            );
+                            // Provider fetch failed
                             return [];
                         }
                     }),
@@ -79,6 +112,14 @@ export class QuotaCache {
                     lastError: null,
                 };
 
+                logger.debug(
+                    "cache:refresh_ok",
+                    {
+                        totalCount: this.state.data.length,
+                        fetchedAt: this.state.fetchedAt?.toISOString(),
+                    },
+                );
+
                 if (this.options.historyService) {
                     void this.options.historyService.append(this.state.data);
                 }
@@ -87,7 +128,15 @@ export class QuotaCache {
                     ...this.state,
                     lastError: e,
                 };
+                logger.error(
+                    "cache:refresh_error",
+                    { error: e },
+                );
             } finally {
+                logger.debug(
+                    "cache:refresh_end",
+                    { inFlightCleared: true },
+                );
                 this.inFlight = null;
             }
         })();

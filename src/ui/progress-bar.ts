@@ -44,8 +44,11 @@ export function colorize(text: string, color: AnsiColor | undefined, useColor: b
 
 function formatNumber(value: number): string {
   if (!Number.isFinite(value)) return "0";
-  if (Math.abs(value) >= 100 || Number.isInteger(value)) {
-    return `${Math.round(value)}`;
+  if (Number.isInteger(value)) {
+    return `${value}`;
+  }
+  if (Math.abs(value) >= 100) {
+    return value.toFixed(1);
   }
   return value.toFixed(1);
 }
