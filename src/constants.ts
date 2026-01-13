@@ -1,5 +1,4 @@
-export const PLUGIN_FOOTER_SIGNATURE = "**Opencode Quotas";
-export const PLUGIN_MARKER = "<!-- opencode-quotas -->"; // Invisible marker used for deduplication
+export const PLUGIN_FOOTER_SIGNATURE = "_Opencode Quotas";
 
 // Heuristic patterns for detecting reasoning/thinking blocks
 export const REASONING_PATTERNS = [

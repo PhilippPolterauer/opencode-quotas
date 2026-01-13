@@ -7,7 +7,6 @@ import { type QuotaData } from "./interfaces";
 import { QuotaCache } from "./quota-cache";
 import {
     PLUGIN_FOOTER_SIGNATURE,
-    PLUGIN_MARKER,
     REASONING_PATTERNS,
     SKIP_REASONS,
 } from "./constants";
@@ -134,8 +133,8 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 return;
             }
 
-            // Secondary safeguard: check if footer already present (using invisible marker)
-            if (output.text.includes(PLUGIN_MARKER)) {
+            // Secondary safeguard: check if footer already present
+            if (output.text.includes(PLUGIN_FOOTER_SIGNATURE)) {
                 debugLog(SKIP_REASONS.FOOTER_PRESENT, {
                     messageID: input.messageID,
                 });
@@ -158,7 +157,7 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 }
 
                 // Double-check text content in case another process injected it while we waited for lock
-                if (output.text.includes(PLUGIN_MARKER)) {
+                if (output.text.includes(PLUGIN_FOOTER_SIGNATURE)) {
                     debugLog("skip:footer_present_after_lock", {
                         messageID: input.messageID,
                     });
@@ -314,16 +313,11 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 // Build visible header only if enabled in config
                 const showTitle = config.showFooterTitle !== false;
                 const titleText = showTitle
-                    ? `${PLUGIN_FOOTER_SIGNATURE} ${modeLabel}**\n`
+                    ? `${PLUGIN_FOOTER_SIGNATURE} ${modeLabel}_\n`
                     : "";
 
-                // Append invisible dedup marker and table lines
-                output.text +=
-                    "\n\n" +
-                    titleText +
-                    PLUGIN_MARKER +
-                    "\n" +
-                    lines.join("\n");
+                // Append table lines (no invisible marker)
+                output.text += "\n\n" + titleText + lines.join("\n");
                 debugLog("inject:footer", {
                     messageID: input.messageID,
                     lines: lines.length,
