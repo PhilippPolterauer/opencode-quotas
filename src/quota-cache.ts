@@ -68,79 +68,82 @@ export class QuotaCache {
             },
         );
         if (this.inFlight) {
+            logger.debug("cache:refresh_coalesced", { inFlight: true });
             return this.inFlight;
         }
 
-        this.inFlight = (async () => {
-            try {
-                const results = await Promise.all(
-                    this.providers.map(async (p: IQuotaProvider) => {
-                        const startedAt = Date.now();
-                        try {
-                            logger.debug(
-                                "cache:provider_fetch_start",
-                                { id: p.id },
-                            );
-                            const result = await p.fetchQuota();
-                            logger.debug(
-                                "cache:provider_fetch_ok",
-                                {
-                                    id: p.id,
-                                    count: result.length,
-                                    durationMs: Date.now() - startedAt,
-                                },
-                            );
-                            return result;
-                        } catch (e) {
-                            logger.error(
-                                "cache:provider_fetch_error",
-                                {
-                                    id: p.id,
-                                    durationMs: Date.now() - startedAt,
-                                    error: e,
-                                },
-                            );
-                            // Provider fetch failed
-                            return [];
-                        }
-                    }),
-                );
+        const refreshPromise = this.doRefresh();
+        this.inFlight = refreshPromise;
 
-                this.state = {
-                    data: results.flat(),
-                    fetchedAt: new Date(),
-                    lastError: null,
-                };
+        return refreshPromise;
+    }
 
-                logger.debug(
-                    "cache:refresh_ok",
-                    {
-                        totalCount: this.state.data.length,
-                        fetchedAt: this.state.fetchedAt?.toISOString(),
-                    },
-                );
+    private async doRefresh(): Promise<void> {
+        try {
+            const results = await Promise.all(
+                this.providers.map(async (p: IQuotaProvider) => {
+                    const startedAt = Date.now();
+                    try {
+                        logger.debug(
+                            "cache:provider_fetch_start",
+                            { id: p.id },
+                        );
+                        const result = await p.fetchQuota();
+                        logger.debug(
+                            "cache:provider_fetch_ok",
+                            {
+                                id: p.id,
+                                count: result.length,
+                                durationMs: Date.now() - startedAt,
+                            },
+                        );
+                        return result;
+                    } catch (e) {
+                        logger.error(
+                            "cache:provider_fetch_error",
+                            {
+                                id: p.id,
+                                durationMs: Date.now() - startedAt,
+                                error: e,
+                            },
+                        );
+                        return [];
+                    }
+                }),
+            );
 
-                if (this.options.historyService) {
-                    void this.options.historyService.append(this.state.data);
-                }
-            } catch (e) {
-                this.state = {
-                    ...this.state,
-                    lastError: e,
-                };
-                logger.error(
-                    "cache:refresh_error",
-                    { error: e },
-                );
-            } finally {
-                logger.debug(
-                    "cache:refresh_end",
-                    { inFlightCleared: true },
-                );
-                this.inFlight = null;
+            this.state = {
+                data: results.flat(),
+                fetchedAt: new Date(),
+                lastError: null,
+            };
+
+            logger.debug(
+                "cache:refresh_ok",
+                {
+                    totalCount: this.state.data.length,
+                    fetchedAt: this.state.fetchedAt?.toISOString(),
+                },
+            );
+
+            if (this.options.historyService) {
+                void this.options.historyService.append(this.state.data);
             }
-        })();
-
-        return this.inFlight;
+        } catch (e) {
+            this.state = {
+                ...this.state,
+                lastError: e,
+            };
+            logger.error(
+                "cache:refresh_error",
+                { error: e },
+            );
+        } finally {
+            logger.debug(
+                "cache:refresh_end",
+                { inFlightCleared: true },
+            );
+            this.inFlight = null;
+        }
     }
 }
