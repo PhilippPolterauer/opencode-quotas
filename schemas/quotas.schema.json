@@ -84,6 +84,11 @@
       "default": true,
       "description": "Whether to show quotas in the chat footer automatically."
     },
+    "showFooterTitle": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to show the plugin title/header in the footer."
+    },
     "groups": {
       "type": "object",
       "description": "Optional grouping definitions per provider ID.",
@@ -125,6 +130,11 @@
         }
       }
     },
+    "filterByCurrentModel": {
+      "type": "boolean",
+      "default": false,
+      "description": "Only show quotas relevant to the current model (best-effort matching)."
+    },
     "debug": {
       "type": "boolean",
       "default": false,
@@ -161,6 +171,11 @@
             "type": "number",
             "default": 60,
             "description": "Time window for regression analysis (minutes)."
+          },
+          "predictionShortWindowMinutes": {
+            "type": "number",
+            "default": 5,
+            "description": "Short time window for capturing spikes (minutes)."
           }
         },
         "required": ["id", "name", "sources"]
@@ -175,6 +190,11 @@
       "type": "number",
       "default": 60000,
       "description": "Polling interval in milliseconds."
+    },
+    "predictionShortWindowMinutes": {
+      "type": "number",
+      "default": 5,
+      "description": "Short time window for regression to capture spikes (minutes)."
     }
   }
 }

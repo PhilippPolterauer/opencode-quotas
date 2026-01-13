@@ -1,4 +1,6 @@
 {
+    "$schema": "../schemas/quotas.schema.json",
+    "filterByCurrentModel": true,
     "debug": true,
     "footer": true,
     "pollingInterval": 10000,
