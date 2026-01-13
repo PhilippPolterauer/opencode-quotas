@@ -11,7 +11,7 @@ import {
     SKIP_REASONS,
 } from "./constants";
 import { logger } from "./logger";
-import { PluginState } from "./plugin-state";
+import { getPluginState } from "./plugin-state";
 import { createQuotaTool } from "./tools/quotas";
 
 /**
@@ -36,7 +36,7 @@ type ExtendedAssistantMessage = Omit<AssistantMessage, "parentID"> & {
  * QuotaHub Plugin for OpenCode.ai
  */
 export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
-    const state = new PluginState();
+    const state = getPluginState();
     const historyService = new HistoryService();
     const quotaService = new QuotaService();
 

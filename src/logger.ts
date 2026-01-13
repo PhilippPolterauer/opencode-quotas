@@ -43,9 +43,11 @@ export class Logger {
         if (requiresDebug && !this.debugEnabled) return;
 
         const timestamp = new Date().toISOString();
-        const payload = data ? ` ${inspect(data, { depth: null, colors: false, breakLength: Infinity })}` : "";
+        const payload = data
+            ? ` ${inspect(data, { depth: null, colors: false, breakLength: Infinity })}`
+            : "";
         const logLine = `[${timestamp}] ${msg}${payload}`;
-        
+
         appendFile(this.logPath, logLine + "\n").catch(() => {});
     }
 }

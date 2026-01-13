@@ -33,7 +33,7 @@ describe("ETTL Prediction (Unit)", () => {
         }
         historyData["q1"] = history;
 
-        const service = new QuotaService();
+        const service = new QuotaService({ showUnaggregated: true });
         await service.init("/tmp", mockHistoryService);
 
         const currentData: QuotaData[] = [
@@ -69,7 +69,7 @@ describe("ETTL Prediction (Unit)", () => {
         }
         historyData["q1"] = history;
 
-        const service = new QuotaService();
+        const service = new QuotaService({ showUnaggregated: true });
         await service.init("/tmp", mockHistoryService);
 
         const currentData: QuotaData[] = [
@@ -95,7 +95,7 @@ describe("ETTL Prediction (Unit)", () => {
             { timestamp: now - 10 * 60 * 1000, used: 80, limit: 100 },
         ];
 
-        const service = new QuotaService();
+        const service = new QuotaService({ showUnaggregated: true });
         await service.init("/tmp", mockHistoryService);
 
         const currentData: QuotaData[] = [

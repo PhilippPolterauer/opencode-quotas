@@ -120,16 +120,6 @@
       },
       "description": "List of quota IDs to hide from display."
     },
-    "modelMapping": {
-      "type": "object",
-      "description": "Maps a model identifier to a list of relevant quota IDs.",
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      }
-    },
     "filterByCurrentModel": {
       "type": "boolean",
       "default": false,
@@ -195,6 +185,11 @@
       "type": "number",
       "default": 5,
       "description": "Short time window for regression to capture spikes (minutes)."
+    },
+    "showUnaggregated": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to show quotas that did not match any aggregation group."
     }
   }
 }

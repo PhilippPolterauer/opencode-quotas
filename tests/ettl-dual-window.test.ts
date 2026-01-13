@@ -46,7 +46,7 @@ describe("ETTL Dual-Window & Aggregation Precedence", () => {
         
         historyData["q1"] = [...longHistory, ...spikeHistory];
 
-        const service = new QuotaService();
+        const service = new QuotaService({ showUnaggregated: true });
         await service.init("/tmp", mockHistoryService);
 
         // We can't call predictTimeToLimit directly as it's private, 
@@ -78,7 +78,7 @@ describe("ETTL Dual-Window & Aggregation Precedence", () => {
             { timestamp: now - 6 * 60 * 1000, used: 50, limit: 100 },
         ];
 
-        const service = new QuotaService();
+        const service = new QuotaService({ showUnaggregated: true });
         await service.init("/tmp", mockHistoryService);
 
         const currentData: QuotaData[] = [

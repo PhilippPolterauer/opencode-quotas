@@ -191,11 +191,12 @@ export class QuotaService {
             return quotas;
         }
 
-        let results = [...quotas];
+        const aggregatedResults: QuotaData[] = [];
+        let remainingQuotas = [...quotas];
 
         for (const group of this.config.aggregatedGroups) {
             // Resolve source quotas from explicit sources and patterns
-            const sourceQuotas = this.resolveGroupSources(results, group);
+            const sourceQuotas = this.resolveGroupSources(remainingQuotas, group);
             if (sourceQuotas.length === 0) continue;
 
             const strategy = group.strategy || "most_critical";
@@ -228,13 +229,21 @@ export class QuotaService {
                     providerName: group.name 
                 };
 
-                // Remove matched sources and add representative
+                // Remove matched sources from pool to avoid double aggregation
                 const sourceIds = new Set(sourceQuotas.map(q => q.id));
-                results = results.filter(q => !sourceIds.has(q.id));
-                results.push(displayQuota);
+                remainingQuotas = remainingQuotas.filter(q => !sourceIds.has(q.id));
+                
+                aggregatedResults.push(displayQuota);
             }
         }
-        return results;
+
+        // Return aggregated results. 
+        // If showUnaggregated is false, only return what matched a group.
+        if (this.config.showUnaggregated === false) {
+            return aggregatedResults;
+        }
+
+        return [...remainingQuotas, ...aggregatedResults];
     }
 
     /**
@@ -297,39 +306,14 @@ export class QuotaService {
             return this.filterByModel(results, context.providerId, context.modelId);
         }
 
-        // Model mapping filtering (existing behavior when filterByCurrentModel is false)
-        if (context && context.providerId && context.modelId) {
-             const currentModelKey = `${context.providerId}/${context.modelId}`;
-             if (this.config.modelMapping && this.config.modelMapping[currentModelKey]) {
-                const relevantIds = new Set(this.config.modelMapping[currentModelKey]);
-                results = results.filter(data => relevantIds.has(data.id));
-            } else if (this.config.modelMapping) {
-                 // Fallback: match by provider ID
-                 const providerLower = context.providerId.toLowerCase();
-                 const matchesProvider = results.filter(q => 
-                    q.providerName.toLowerCase().includes(providerLower)
-                 );
-                 
-                 if (matchesProvider.length > 0) {
-                     results = matchesProvider;
-                 }
-            }
-        }
         return results;
     }
 
     private filterByModel(quotas: QuotaData[], providerId: string, modelId: string): QuotaData[] {
         const providerLower = providerId.toLowerCase();
         const modelIdLower = modelId.toLowerCase();
-        const currentModelKey = `${providerId}/${modelId}`;
 
-        // 1) Explicit mapping
-        if (this.config.modelMapping && this.config.modelMapping[currentModelKey]) {
-            const relevantIds = new Set(this.config.modelMapping[currentModelKey]);
-            return quotas.filter(data => relevantIds.has(data.id));
-        }
-
-        // 2) Fuzzy token match with scoring
+        // Fuzzy token match with scoring
         const tokens = modelIdLower.split(/[^a-z0-9]+/).filter(Boolean);
         const scoredMatches = quotas
             .map(q => {

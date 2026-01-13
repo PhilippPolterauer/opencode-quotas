@@ -88,9 +88,6 @@ export class ConfigLoader {
         if (userConfig.disabled) {
             target.disabled = userConfig.disabled;
         }
-        if (userConfig.modelMapping) {
-            target.modelMapping = userConfig.modelMapping;
-        }
         if (userConfig.filterByCurrentModel !== undefined) {
             target.filterByCurrentModel = userConfig.filterByCurrentModel;
         }

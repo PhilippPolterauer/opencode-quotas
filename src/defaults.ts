@@ -7,7 +7,7 @@ export const DEFAULT_CONFIG: QuotaConfig = {
     showFooterTitle: true,
     debug: false,
     progressBar: {
-        color: true,
+        color: false,
         gradients: [
             { threshold: 0.5, color: "green" },
             { threshold: 0.8, color: "yellow" },
@@ -17,18 +17,8 @@ export const DEFAULT_CONFIG: QuotaConfig = {
     table: {
         header: true,
     },
-    modelMapping: {
-        // Example mapping: "provider/model": ["quota-id"]
-        "google/antigravity-gemini-3-flash": ["ag-flash"],
-        "google/antigravity-gemini-3-pro": ["ag-pro"],
-        "google/antigravity-claude-sonnet-4-5": ["ag-premium"],
-        "google/antigravity-claude-sonnet-4-5-thinking": ["ag-premium"],
-        "google/antigravity-claude-opus-4-5-thinking": ["ag-premium"],
-        "antigravity/gemini-flash": ["ag-flash"],
-        "antigravity/gemini-pro": ["ag-pro"],
-        "antigravity/gpt-4": ["ag-premium"],
-    },
-    filterByCurrentModel: true,
+    filterByCurrentModel: false,
+    showUnaggregated: false,
     aggregatedGroups: [
         {
             id: "ag-flash",

@@ -45,30 +45,31 @@ describe("QuotaService", () => {
         expect(config.disabled).toContain("test-quota");
     });
 
-    test("processes quotas with model mapping", () => {
+    test("filters quotas by current model when filterByCurrentModel is enabled", () => {
         const service = new QuotaService({
-            modelMapping: {
-                "prov/mod": ["quota-1"]
-            }
+            filterByCurrentModel: true,
+            showUnaggregated: true
         });
 
         const mockData = [
-            { id: "quota-1", providerName: "A", used: 10, limit: 100, unit: "u" },
-            { id: "quota-2", providerName: "B", used: 20, limit: 100, unit: "u" },
+            { id: "quota-flash", providerName: "Flash Model", used: 10, limit: 100, unit: "u" },
+            { id: "quota-pro", providerName: "Pro Model", used: 20, limit: 100, unit: "u" },
         ];
 
         const filtered = service.processQuotas(mockData, {
-            providerId: "prov",
-            modelId: "mod"
+            providerId: "provider",
+            modelId: "flash-v2"
         });
 
+        // Should match "flash" token in quota-flash
         expect(filtered).toHaveLength(1);
-        expect(filtered[0].id).toBe("quota-1");
+        expect(filtered[0].id).toBe("quota-flash");
     });
 
     test("filters disabled quotas", () => {
         const service = new QuotaService({
-            disabled: ["quota-2"]
+            disabled: ["quota-2"],
+            showUnaggregated: true
         });
 
         const mockData = [

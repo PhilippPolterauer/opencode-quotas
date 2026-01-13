@@ -1,114 +1,112 @@
 export interface QuotaData {
-  id: string; // Unique identifier (e.g., "codex-primary", "ag-flash")
-  providerName: string; // Display name
-  used: number;
-  limit: number | null;
-  unit: string;
-  
-  /**
-   * Reset time description (e.g. "in 2h 41m" or "at 12:00").
-   */
-  reset?: string;
-  
-  /**
-   * Predicted time until limit is reached (e.g. "in 12m (predicted)").
-   */
-  predictedReset?: string;
-  
-  /**
-   * Window or period description (e.g. "5h window" or "Monthly").
-   */
-  window?: string;
+    id: string; // Unique identifier (e.g., "codex-primary", "ag-flash")
+    providerName: string; // Display name
+    used: number;
+    limit: number | null;
+    unit: string;
 
-  /**
-   * Extra information or alerts (e.g. "!!" or "unlimited").
-   */
-  info?: string;
+    /**
+     * Reset time description (e.g. "in 2h 41m" or "at 12:00").
+     */
+    reset?: string;
 
-  /**
-   * @deprecated Use reset, window, info instead.
-   */
-  details?: string;
+    /**
+     * Predicted time until limit is reached (e.g. "in 12m (predicted)").
+     */
+    predictedReset?: string;
+
+    /**
+     * Window or period description (e.g. "5h window" or "Monthly").
+     */
+    window?: string;
+
+    /**
+     * Extra information or alerts (e.g. "!!" or "unlimited").
+     */
+    info?: string;
+
+    /**
+     * @deprecated Use reset, window, info instead.
+     */
+    details?: string;
 }
 
-export type QuotaColumn = 
-  | "name" 
-  | "bar" 
-  | "percent" 
-  | "value" 
-  | "reset" 
-  | "window" 
-  | "info"
-  | "status"
-  | "ettl";
+export type QuotaColumn =
+    | "name"
+    | "bar"
+    | "percent"
+    | "value"
+    | "reset"
+    | "window"
+    | "info"
+    | "status"
+    | "ettl";
 
- export interface QuotaConfig {
-   displayMode: QuotaDisplayMode;
-   progressBar?: ProgressBarConfig;
-   table?: {
-       /**
-        * Columns to display in the quota table.
-        * Defaults to a smart selection based on data.
-        */
-       columns?: QuotaColumn[];
-       /**
-        * Whether to render the table header row (column labels)
-        */
-       header?: boolean;
-   };
-   /**
-    * Whether to show quotas in the chat footer automatically.
-    * Defaults to true.
-    */
-   footer?: boolean;
-   /**
-    * Whether to show the plugin title/header (bold line) in the footer.
-    * Defaults to true.
-    */
-   showFooterTitle?: boolean;
+export interface QuotaConfig {
+    displayMode: QuotaDisplayMode;
+    progressBar?: ProgressBarConfig;
+    table?: {
+        /**
+         * Columns to display in the quota table.
+         * Defaults to a smart selection based on data.
+         */
+        columns?: QuotaColumn[];
+        /**
+         * Whether to render the table header row (column labels)
+         */
+        header?: boolean;
+    };
+    /**
+     * Whether to show quotas in the chat footer automatically.
+     * Defaults to true.
+     */
+    footer?: boolean;
+    /**
+     * Whether to show the plugin title/header (bold line) in the footer.
+     * Defaults to true.
+     */
+    showFooterTitle?: boolean;
     /**
      * List of quota IDs to hide from display.
      */
     disabled?: string[];
-   /**
-    * Maps a model identifier (e.g., "antigravity:gemini-1.5-flash") to a list
-    * of relevant quota IDs. If provided, the plugin will only show these
-    * quotas for that model.
-    */
-   modelMapping?: Record<string, string[]>;
-   /**
-    * Only show quotas relevant to the current model (best-effort matching).
-    * Use modelMapping for precise control.
-    */
-   filterByCurrentModel?: boolean;
-   /**
-    * Enable debug logging to ~/.local/share/opencode/quotas-debug.log
-    */
-   debug?: boolean;
-   /**
-    * Optional aggregation groups.
-    */
-   aggregatedGroups?: AggregatedGroup[];
-   /**
-    * Max history age in hours. Defaults to 24.
-    */
-   historyMaxAgeHours?: number;
-   /**
-    * Polling interval in milliseconds. Defaults to 60000 (1 minute).
-    */
-   pollingInterval?: number;
-   /**
-    * Short time window for regression to capture spikes (minutes). Defaults to 5.
-    */
-   predictionShortWindowMinutes?: number;
- }
+    /**
+     * Only show quotas relevant to the current model (best-effort matching).
+     */
+    filterByCurrentModel?: boolean;
+    /**
+     * Enable debug logging to ~/.local/share/opencode/quotas-debug.log
+     */
+    debug?: boolean;
+    /**
+     * Optional aggregation groups.
+     */
+    aggregatedGroups?: AggregatedGroup[];
+    /**
+     * Max history age in hours. Defaults to 24.
+     */
+    historyMaxAgeHours?: number;
+    /**
+     * Polling interval in milliseconds. Defaults to 60000 (1 minute).
+     */
+    pollingInterval?: number;
+    /**
+     * Short time window for regression to capture spikes (minutes). Defaults to 5.
+     */
+    predictionShortWindowMinutes?: number;
+    /**
+     * Whether to show quotas that did not match any aggregation group.
+     * Defaults to true.
+     */
+    showUnaggregated?: boolean;
+}
 
-export type AggregationStrategy = 
-  | "most_critical" // Predicted time-to-limit (requires history)
-  | "min"           // Lowest percentage used
-  | "max"           // Highest percentage used
-  | "mean"          // Average percentage used
-  | "median";       // Median percentage used
+export type AggregationStrategy =
+    | "most_critical" // Predicted time-to-limit (requires history)
+    | "min" // Lowest percentage used
+    | "max" // Highest percentage used
+    | "mean" // Average percentage used
+    | "median"; // Median percentage used
 
 export interface AggregatedGroup {
     /**
@@ -164,13 +162,13 @@ export interface IHistoryService {
 }
 
 export interface IQuotaProvider {
-  id: string;
-  fetchQuota(): Promise<QuotaData[]>;
+    id: string;
+    fetchQuota(): Promise<QuotaData[]>;
 }
 
 export interface IQuotaRegistry {
-  register(provider: IQuotaProvider): void;
-  getAll(): IQuotaProvider[];
+    register(provider: IQuotaProvider): void;
+    getAll(): IQuotaProvider[];
 }
 
 /**
@@ -184,7 +182,11 @@ export interface IPredictionEngine {
      * @param shortWindowMinutes - The short time window for capturing spikes
      * @returns Time to limit in milliseconds, or Infinity if usage is stable/decreasing
      */
-    predictTimeToLimit(quotaId: string, windowMinutes?: number, shortWindowMinutes?: number): number;
+    predictTimeToLimit(
+        quotaId: string,
+        windowMinutes?: number,
+        shortWindowMinutes?: number,
+    ): number;
 }
 
 /**
@@ -195,63 +197,62 @@ export interface IAggregationService {
      * Aggregates quotas using the most critical (shortest time-to-limit) strategy.
      */
     aggregateMostCritical(
-        quotas: QuotaData[], 
-        windowMinutes?: number, 
-        shortWindowMinutes?: number
+        quotas: QuotaData[],
+        windowMinutes?: number,
+        shortWindowMinutes?: number,
     ): QuotaData | null;
-    
+
     /**
      * Aggregates quotas by selecting the one with highest usage ratio.
      */
     aggregateMax(quotas: QuotaData[]): QuotaData;
-    
+
     /**
      * Aggregates quotas by selecting the one with lowest usage ratio.
      */
     aggregateMin(quotas: QuotaData[]): QuotaData;
-    
+
     /**
      * Aggregates quotas by averaging their usage ratios.
      */
     aggregateAverage(
-        quotas: QuotaData[], 
-        name: string, 
-        id: string, 
-        strategy: "mean" | "median"
+        quotas: QuotaData[],
+        name: string,
+        id: string,
+        strategy: "mean" | "median",
     ): QuotaData;
 }
 
 export type QuotaDisplayMode = "simple" | "detailed" | "hidden";
 
 export type AnsiColor =
-  | "red"
-  | "green"
-  | "yellow"
-  | "blue"
-  | "magenta"
-  | "cyan"
-  | "white"
-  | "gray"
-  | "bold"
-  | "dim"
-  | "reset";
+    | "red"
+    | "green"
+    | "yellow"
+    | "blue"
+    | "magenta"
+    | "cyan"
+    | "white"
+    | "gray"
+    | "bold"
+    | "dim"
+    | "reset";
 
 export interface GradientLevel {
-  threshold: number; // 0 to 1 (e.g., 0.8 for 80%)
-  color: AnsiColor;
+    threshold: number; // 0 to 1 (e.g., 0.8 for 80%)
+    color: AnsiColor;
 }
 
 export interface ProgressBarConfig {
-  width?: number;
-  filledChar?: string;
-  emptyChar?: string;
-  show?: "used" | "available";
-  /**
-   * Enable ANSI colors. Defaults to false.
-   */
-  color?: boolean;
-  // Define color levels. The bar will use the color of the first level
-  // whose threshold is greater than or equal to the current usage ratio.
-  gradients?: GradientLevel[];
+    width?: number;
+    filledChar?: string;
+    emptyChar?: string;
+    show?: "used" | "available";
+    /**
+     * Enable ANSI colors. Defaults to false.
+     */
+    color?: boolean;
+    // Define color levels. The bar will use the color of the first level
+    // whose threshold is greater than or equal to the current usage ratio.
+    gradients?: GradientLevel[];
 }
-
