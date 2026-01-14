@@ -90,6 +90,20 @@ export class QuotaService {
             logger.error("init:provider_failed", { id: "codex", error: e });
             console.warn("[QuotaService] Failed to initialize Codex provider:", e);
         }
+
+        // Register GitHub Copilot (experimental, disabled by default)
+        if (this.config.enableExperimentalGithub) {
+            try {
+                const { createGithubProvider } = await import("../providers/github");
+                registry.register(createGithubProvider());
+                logger.debug("init:provider_registered", { id: "github-copilot" });
+            } catch (e) {
+                logger.error("init:provider_failed", { id: "github-copilot", error: e });
+                console.warn("[QuotaService] Failed to initialize GitHub Copilot provider:", e);
+            }
+        } else {
+            logger.debug("init:provider_skipped", { id: "github-copilot" });
+        }
     }
 
     getConfig(): QuotaConfig {

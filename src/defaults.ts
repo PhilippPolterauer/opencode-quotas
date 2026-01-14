@@ -6,6 +6,7 @@ export const DEFAULT_CONFIG: QuotaConfig = {
     footer: true,
     showFooterTitle: true,
     debug: false,
+    enableExperimentalGithub: false,
     progressBar: {
         color: false,
         gradients: [

@@ -45,7 +45,7 @@ graph TD
         Service --> Cache[QuotaCache]
         Registry --> P1[Antigravity Provider]
         Registry --> P2[Codex Provider]
-        Registry --> P3[GitHub Provider]
+        Registry --> P3[GitHub Provider - Experimental]
         Main --> UI[quota-table.ts]
         UI --> PB[progress-bar.ts]
     end

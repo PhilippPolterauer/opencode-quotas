@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quota Providers**
   - **Antigravity Provider**: Full support for local and cloud quotas with category-based breakdown (Flash, Pro, Premium)
   - **Codex Provider**: Support for primary/secondary rate limit windows and credit balances
-  - **GitHub Copilot Provider**: Experimental tracking for monthly suggestions (currently limited by API availability)
+  - **GitHub Copilot Provider**: Experimental tracking for monthly suggestions (disabled by default; enable via `enableExperimentalGithub` in `.opencode/quotas.json`)
 
 - **Smart Features**
   - **Dual-Window ETTL Prediction**: Accurate "Estimated Time to Limit" using both long-term trends and short-term spike detection

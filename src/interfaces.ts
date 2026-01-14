@@ -78,6 +78,7 @@ export interface QuotaConfig {
      * Enable debug logging to ~/.local/share/opencode/quotas-debug.log
      */
     debug?: boolean;
+    enableExperimentalGithub?: boolean;
     /**
      * Optional aggregation groups.
      */

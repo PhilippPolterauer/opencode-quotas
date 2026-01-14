@@ -77,6 +77,9 @@ export class ConfigLoader {
             target.debug = userConfig.debug;
             logger.setDebug(!!target.debug);
         }
+        if (userConfig.enableExperimentalGithub !== undefined) {
+            target.enableExperimentalGithub = userConfig.enableExperimentalGithub;
+        }
         if (userConfig.footer !== undefined) {
             target.footer = userConfig.footer;
         }

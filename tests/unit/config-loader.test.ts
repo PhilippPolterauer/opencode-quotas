@@ -188,7 +188,7 @@ describe("ConfigLoader", () => {
             expect(result.filterByCurrentModel).toBe(true);
         });
 
-        test("merges table config from user config", async () => {
+            test("merges table config from user config", async () => {
             const opencodeDir = join(tempDir, ".opencode");
             await fs.mkdir(opencodeDir, { recursive: true });
             await fs.writeFile(
@@ -234,6 +234,20 @@ describe("ConfigLoader", () => {
             const result = await ConfigLoader.loadFromDisk(tempDir, initialConfig);
 
             expect(result.showFooterTitle).toBe(false);
+        });
+
+        test("merges enableExperimentalGithub from user config", async () => {
+            const opencodeDir = join(tempDir, ".opencode");
+            await fs.mkdir(opencodeDir, { recursive: true });
+            await fs.writeFile(
+                join(opencodeDir, "quotas.json"),
+                JSON.stringify({ enableExperimentalGithub: true })
+            );
+
+            const initialConfig = ConfigLoader.createConfig();
+            const result = await ConfigLoader.loadFromDisk(tempDir, initialConfig);
+
+            expect(result.enableExperimentalGithub).toBe(true);
         });
     });
 });

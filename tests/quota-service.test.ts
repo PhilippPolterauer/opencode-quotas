@@ -89,10 +89,32 @@ describe("QuotaService", () => {
         await fs.mkdir(opencodeDir, { recursive: true });
         await fs.writeFile(join(opencodeDir, "quotas.json"), JSON.stringify({ pollingInterval: "invalid" }));
 
-        const service = new QuotaService();
+    const service = new QuotaService();
         await service.init(tempDir);
-
+ 
         const config = service.getConfig();
         expect(config.pollingInterval).toBe(require("../src/defaults").DEFAULT_CONFIG.pollingInterval);
+    });
+
+    test("does not register GitHub provider by default", async () => {
+        // Clear global registry to ensure clean state
+        delete (globalThis as any)["__OPENCODE_QUOTA_REGISTRY__"];
+        const service = new QuotaService();
+        await service.init(tempDir);
+        const providers = service.getProviders();
+        expect(providers.find((p) => p.id === "github-copilot")).toBeUndefined();
+    });
+
+    test("registers GitHub provider when enabled in config", async () => {
+        // Clear global registry to ensure clean state
+        delete (globalThis as any)["__OPENCODE_QUOTA_REGISTRY__"];
+        const opencodeDir = join(tempDir, ".opencode");
+        await fs.mkdir(opencodeDir, { recursive: true });
+        await fs.writeFile(join(opencodeDir, "quotas.json"), JSON.stringify({ enableExperimentalGithub: true }));
+
+        const service = new QuotaService();
+        await service.init(tempDir);
+        const providers = service.getProviders();
+        expect(providers.some((p) => p.id === "github-copilot")).toBeTruthy();
     });
 });

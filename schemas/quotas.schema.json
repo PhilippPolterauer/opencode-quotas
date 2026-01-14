@@ -130,6 +130,11 @@
       "default": false,
       "description": "Enable debug logging."
     },
+    "enableExperimentalGithub": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable the experimental GitHub Copilot provider (disabled by default)."
+    },
     "aggregatedGroups": {
       "type": "array",
       "description": "Optional aggregation groups to combine multiple quotas.",
