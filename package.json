@@ -13,7 +13,7 @@
     },
     "packageManager": "bun@1.1.20",
     "bin": {
-        "opencode-quotas": "./dist/src/cli.js"
+        "opencode-quotas": "./dist/cli.js"
     },
     "files": [
         "dist",

@@ -336,3 +336,5 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
 
     return hooks;
 };
+
+export default QuotaHubPlugin;
