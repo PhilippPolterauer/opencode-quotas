@@ -91,6 +91,9 @@ export class ConfigLoader {
         if (userConfig.filterByCurrentModel !== undefined) {
             target.filterByCurrentModel = userConfig.filterByCurrentModel;
         }
+        if (userConfig.showUnaggregated !== undefined) {
+            target.showUnaggregated = userConfig.showUnaggregated;
+        }
         if (userConfig.aggregatedGroups) {
             target.aggregatedGroups = userConfig.aggregatedGroups;
         }

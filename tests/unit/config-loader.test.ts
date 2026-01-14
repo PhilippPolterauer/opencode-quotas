@@ -192,5 +192,21 @@ describe("ConfigLoader", () => {
             expect(result.table?.columns).toEqual(["name", "bar", "percent"]);
             expect(result.table?.header).toBe(false);
         });
+
+        test("merges showUnaggregated from user config", async () => {
+            const opencodeDir = join(tempDir, ".opencode");
+            await fs.mkdir(opencodeDir, { recursive: true });
+            await fs.writeFile(
+                join(opencodeDir, "quotas.json"),
+                JSON.stringify({
+                    showUnaggregated: true
+                })
+            );
+
+            const initialConfig = ConfigLoader.createConfig();
+            const result = await ConfigLoader.loadFromDisk(tempDir, initialConfig);
+
+            expect(result.showUnaggregated).toBe(true);
+        });
     });
 });

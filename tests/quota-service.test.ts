@@ -33,7 +33,8 @@ describe("QuotaService", () => {
         await fs.writeFile(join(opencodeDir, "quotas.json"), JSON.stringify({
             footer: false,
             debug: true,
-            disabled: ["test-quota"]
+            disabled: ["test-quota"],
+            showUnaggregated: true
         }));
 
         const service = new QuotaService();
