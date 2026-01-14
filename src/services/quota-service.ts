@@ -263,6 +263,67 @@ export class QuotaService {
     /**
      * Resolves which quotas belong to an AggregatedGroup using explicit sources and patterns.
      */
+    private matchPattern(pattern: string, target: string): { matched: boolean; matchType?: "token" | "regex" | "substr"; tokenIndex?: number; tokensCount?: number; matchIndex?: number; matchLength?: number } {
+        const p = pattern.trim();
+        const lowerTarget = target.toLowerCase();
+        const lowerPattern = p.toLowerCase();
+
+        const hasStar = p.includes("*");
+        const hasQuestion = p.includes("?");
+        const hasDotStar = p.includes(".*") || p.includes(".+");
+        const hasOtherRegex = /[+^${}()|\[\]\\]/.test(p);
+
+        try {
+            if (hasStar || hasQuestion) {
+                let regexStr = "";
+                for (let i = 0; i < p.length; i++) {
+                    const ch = p[i];
+                    if (ch === "*") {
+                        regexStr += ".*";
+                    } else if (ch === "?") {
+                        regexStr += ".";
+                    } else {
+                        regexStr += ch.replace(/[-\\/\^$+?.()|[\]{}]/g, "\\$&");
+                    }
+                }
+                const regex = new RegExp(regexStr, "i");
+                const m = regex.exec(target);
+                if (m) {
+                    return { matched: true, matchType: "regex", matchIndex: m.index, matchLength: m[0].length };
+                }
+                return { matched: false };
+            }
+
+            if (hasDotStar || hasOtherRegex) {
+                try {
+                    const regex = new RegExp(p, "i");
+                    const m = regex.exec(target);
+                    if (m) {
+                        return { matched: true, matchType: "regex", matchIndex: m.index, matchLength: m[0].length };
+                    }
+                    return { matched: false };
+                } catch (_) {
+                }
+            }
+
+            const tokens = lowerTarget.split(/[^a-z0-9]+/).filter(Boolean);
+            for (let i = 0; i < tokens.length; i++) {
+                if (tokens[i] === lowerPattern) {
+                    return { matched: true, matchType: "token", tokenIndex: i, tokensCount: tokens.length };
+                }
+            }
+
+            if (lowerTarget.includes(lowerPattern)) {
+                const idx = lowerTarget.indexOf(lowerPattern);
+                return { matched: true, matchType: "substr", matchIndex: idx, matchLength: lowerPattern.length };
+            }
+
+            return { matched: false };
+        } catch (e) {
+            return { matched: false };
+        }
+    }
+
     private resolveGroupSources(quotas: QuotaData[], group: AggregatedGroup): QuotaData[] {
         const matched: QuotaData[] = [];
         const matchedIds = new Set<string>();
@@ -292,10 +353,10 @@ export class QuotaService {
                 }
 
                 // Check if any pattern matches
-                const matchTarget = `${quota.id} ${quota.providerName}`.toLowerCase();
+                const matchTarget = `${quota.id} ${quota.providerName}`;
                 const patternMatches = group.patterns.some(pattern => {
-                    const lowerPattern = pattern.toLowerCase();
-                    return matchTarget.includes(lowerPattern);
+                    const res = this.matchPattern(pattern, matchTarget);
+                    return res.matched;
                 });
 
                 if (patternMatches) {

@@ -62,6 +62,48 @@ describe("QuotaService - aggregation helpers", () => {
         // dup-1 should appear once, dup-2 should be matched via pattern
         expect(matched.map(m => m.id).sort()).toEqual(["dup-1", "dup-2"].sort());
     });
+
+    test("overlapping patterns do not cause duplicate or wrong group matches", () => {
+        const service = new QuotaService({ showUnaggregated: true });
+        const quotas: QuotaData[] = [
+            { id: "ag-raw-gemini-1-5-flash", providerName: "Antigravity", used: 10, limit: 100, unit: "u" },
+            { id: "ag-raw-gemini-1-5-pro", providerName: "Antigravity", used: 20, limit: 100, unit: "u" },
+        ];
+
+        // Use groups from defaults for accuracy
+        const { DEFAULT_CONFIG } = require("../../src/defaults");
+        const flashGroup = (DEFAULT_CONFIG.aggregatedGroups || []).find((g: any) => g.id === "ag-flash");
+        const proGroup = (DEFAULT_CONFIG.aggregatedGroups || []).find((g: any) => g.id === "ag-pro");
+
+        expect(flashGroup).toBeDefined();
+        expect(proGroup).toBeDefined();
+
+        const matchedFlash = (service as any).resolveGroupSources(quotas, flashGroup);
+        const matchedPro = (service as any).resolveGroupSources(quotas, proGroup);
+
+        // Ensure flash quota matches flash group and not pro group
+        expect(matchedFlash.map(m => m.id)).toContain("ag-raw-gemini-1-5-flash");
+        expect(matchedPro.map(m => m.id)).toContain("ag-raw-gemini-1-5-pro");
+        expect(matchedPro.map(m => m.id)).not.toContain("ag-raw-gemini-1-5-flash");
+    });
+
+    test("aggregating quotas with default groups assigns each quota to the correct group", () => {
+        const { DEFAULT_CONFIG } = require("../../src/defaults");
+        const service = new QuotaService({ aggregatedGroups: DEFAULT_CONFIG.aggregatedGroups, showUnaggregated: true });
+
+        const quotas: QuotaData[] = [
+            { id: "ag-raw-gemini-1-5-flash", providerName: "Antigravity Gemini Flash", used: 10, limit: 100, unit: "u" },
+            { id: "ag-raw-gemini-1-5-pro", providerName: "Antigravity Gemini Pro", used: 20, limit: 100, unit: "u" },
+        ];
+
+        const processed = service.processQuotas(quotas);
+        const ids = processed.map(q => q.id);
+
+        expect(ids).toContain("ag-flash");
+        expect(ids).toContain("ag-pro");
+        expect(ids).not.toContain("ag-raw-gemini-1-5-flash");
+        expect(ids).not.toContain("ag-raw-gemini-1-5-pro");
+    });
 });
 
 describe("QuotaService - filterByModel fuzzy matching", () => {

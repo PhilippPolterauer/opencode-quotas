@@ -541,6 +541,9 @@ export const QuotaHubPlugin: Plugin = async ({
                     debugLog,
                 );
                 if (!footer) {
+                    // No footer to inject for this message; mark as processed to avoid redundant
+                    // repeated checks by concurrent callers.
+                    state.markProcessed(input.messageID);
                     return;
                 }
 

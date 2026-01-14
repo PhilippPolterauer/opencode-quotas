@@ -24,14 +24,14 @@ export const DEFAULT_CONFIG: QuotaConfig = {
         {
             id: "ag-flash",
             name: "Antigravity Flash",
-            patterns: ["flash"],
+            patterns: ["flash", "-flash", "gemini-.*-flash"],
             providerId: "antigravity",
             strategy: "most_critical",
         },
         {
             id: "ag-pro",
             name: "Antigravity Pro",
-            patterns: ["pro", "gemini"],
+            patterns: ["pro", "gemini.*pro", "gemini-1.5-pro"],
             providerId: "antigravity",
             strategy: "most_critical",
         },
