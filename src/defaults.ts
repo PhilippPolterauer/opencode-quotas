@@ -19,7 +19,7 @@ export const DEFAULT_CONFIG: QuotaConfig = {
         header: true,
     },
     filterByCurrentModel: false,
-    showUnaggregated: false,
+    showUnaggregated: true,
     aggregatedGroups: [
         {
             id: "ag-flash",
