@@ -147,7 +147,9 @@ describe("ConfigLoader", () => {
             await fs.mkdir(opencodeDir, { recursive: true });
             await fs.writeFile(
                 join(opencodeDir, "quotas.json"),
-                "{ invalid json }"
+                JSON.stringify({
+                    showUnaggregated: true
+                })
             );
 
             const initialConfig = ConfigLoader.createConfig();
