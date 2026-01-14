@@ -160,7 +160,9 @@ describe("ConfigLoader", () => {
             await fs.mkdir(opencodeDir, { recursive: true });
             await fs.writeFile(
                 join(opencodeDir, "quotas.json"),
-                "{ invalid json }"
+                JSON.stringify({
+                    showUnaggregated: true
+                })
             );
 
             const initialConfig = ConfigLoader.createConfig();
@@ -211,15 +213,27 @@ describe("ConfigLoader", () => {
             await fs.mkdir(opencodeDir, { recursive: true });
             await fs.writeFile(
                 join(opencodeDir, "quotas.json"),
-                JSON.stringify({
-                    showUnaggregated: true
-                })
+                JSON.stringify({ showUnaggregated: true })
             );
 
             const initialConfig = ConfigLoader.createConfig();
             const result = await ConfigLoader.loadFromDisk(tempDir, initialConfig);
 
             expect(result.showUnaggregated).toBe(true);
+        });
+
+        test("merges showFooterTitle from user config", async () => {
+            const opencodeDir = join(tempDir, ".opencode");
+            await fs.mkdir(opencodeDir, { recursive: true });
+            await fs.writeFile(
+                join(opencodeDir, "quotas.json"),
+                JSON.stringify({ showFooterTitle: false })
+            );
+
+            const initialConfig = ConfigLoader.createConfig();
+            const result = await ConfigLoader.loadFromDisk(tempDir, initialConfig);
+
+            expect(result.showFooterTitle).toBe(false);
         });
     });
 });
