@@ -19,12 +19,48 @@ This project strictly uses **Bun** as the package manager and runtime for testin
 
 ## 🛠 Project Structure
 
-- `/src/index.ts`: Entry point. Registers default providers.
-- `/src/registry.ts`: Singleton registry for `IQuotaProvider` implementations.
-- `/src/interfaces.ts`: Core type definitions (`QuotaData`, `IQuotaProvider`).
-- `/src/providers/`: Concrete provider implementations (e.g., `antigravity.ts`, `codex.ts`).
-- `/src/ui/`: CLI rendering components (`quota-table.ts`, `progress-bar.ts`).
-- `/src/antigravity/`: Logic layer for interacting with Antigravity services.
+- Core
+  - `/src/index.ts`: Entry point. Registers providers and initializes the plugin.
+  - `/src/registry.ts`: Singleton registry for `IQuotaProvider` implementations.
+  - `/src/interfaces.ts`: Core type definitions (`QuotaData`, `IQuotaProvider`).
+  - `/src/constants.ts`: Shared constants used across the project.
+  - `/src/defaults.ts`: Default configuration values used by the plugin.
+
+- Providers
+  - `/src/providers/`: Provider factories and concrete implementations (e.g., `antigravity.ts`, `codex.ts`).
+
+- Services
+  - `/src/services/`: Business logic and background services.
+    - `quota-service.ts`: Coordinates fetching and caching of quotas.
+    - `config-loader.ts`: Loads and validates configuration.
+    - `aggregation-service.ts`: Aggregates and normalizes quota data.
+    - `prediction-engine.ts`: Optional usage/prediction logic.
+    - `history-service.ts`: Manages historical quota records.
+
+- Integrations
+  - `/src/antigravity/`: Integration layer for Antigravity (e.g., `auth.ts`, `client.ts`).
+
+- CLI & Tools
+  - `/src/cli.ts`: Command-line entrypoint (used by package `bin`).
+  - `/src/tools/`: CLI tools and command implementations (e.g., `quotas` tool).
+
+- UI
+  - `/src/ui/`: CLI rendering components (`quota-table.ts`, `progress-bar.ts`).
+
+- Utilities
+  - `/src/utils/`: Small helpers (`paths.ts`, `time.ts`, `validation.ts`).
+  - `/src/logger.ts`: Centralized logging for debug output.
+
+- State & Cache
+  - `/src/plugin-state.ts`: In-memory plugin state and locking structures.
+  - `/src/quota-cache.ts`: Cache layer for fetched quota data.
+
+- Tests & Schemas
+  - `/tests/`: Unit and integration tests.
+  - `/schemas/quotas.schema.json`: Configuration schema for `QuotaConfig`.
+
+- Project files
+  - `package.json`, `tsconfig.*`, `.opencode/quotas.json`, `README.md`, `CHANGELOG.md`.
 
 ## ⚙️ Environment Configuration
 
