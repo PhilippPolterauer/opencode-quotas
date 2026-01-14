@@ -69,7 +69,7 @@ opencode-quotas --provider google --model antigravity-gemini-3-flash
 | **Codex** | `codex-primary`, `codex-secondary` | `codex-smart` | Rate limits aggregated using most-critical strategy. |
 | **GitHub Copilot** | — | — | ⚠️ Experimental (disabled by default). |
 
-> **Note**: Quota IDs are used in configuration options like `disabled` and `modelMapping`.
+> **Note**: Quota IDs are used in configuration options like `disabled`.
 
 ## Column Reference
 
@@ -116,22 +116,6 @@ ST    QUOTA NAME          USED   UTILIZATION            RESET   ETTL
 ---   -----------------   ----   --------------------   -----   ----
 OK    Antigravity Flash    20%   ████░░░░░░░░░░░░░░░░   28m     13m
 ```
-
-### Explicit Model Mapping
-
-For precise control, map model IDs directly to quota IDs:
-
-```json
-{
-  "modelMapping": {
-    "google/antigravity-gemini-3-flash": ["ag-flash"],
-    "google/antigravity-gemini-3-pro": ["ag-pro"],
-    "github-copilot/gpt-4o": ["codex-smart"]
-  }
-}
-```
-
-> **Note**: Model IDs must match the format from `opencode models` (e.g., `provider/model-name`).
 
 ### Hide Specific Quotas
 
@@ -313,7 +297,6 @@ See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JS
 | :--- | :--- | :--- | :--- |
 | `footer` | boolean | `true` | Show quotas in chat footer |
 | `filterByCurrentModel` | boolean | `false` | Filter quotas by active model |
-| `modelMapping` | object | (see defaults) | Explicit model-to-quota mappings |
 | `disabled` | string[] | `[]` | Quota IDs to hide |
 | `progressBar.color` | boolean | `true` | Enable ANSI colors |
 | `progressBar.width` | number | `20` | Progress bar character width |

@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Configuration**
   - JSON Schema for `.opencode/quotas.json`
   - Environment variable support (`OPENCODE_QUOTAS_CONFIG_PATH`, `NO_COLOR`)
-  - Model-to-quota mapping for context-aware filtering
+  - Model-aware quota filtering based on active model
   - Configurable history retention and polling intervals
   - `showUnaggregated` option to display raw provider data alongside aggregated groups
 

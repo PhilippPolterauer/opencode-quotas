@@ -20,7 +20,7 @@ This project strictly uses **Bun** as the package manager and runtime for testin
 ## 🛠 Project Structure
 
 - Core
-  - `/src/index.ts`: Entry point. Registers providers and initializes the plugin.
+  - `/src/index.ts`: Entry point. Initializes the plugin and wires hooks.
   - `/src/registry.ts`: Singleton registry for `IQuotaProvider` implementations.
   - `/src/interfaces.ts`: Core type definitions (`QuotaData`, `IQuotaProvider`).
   - `/src/constants.ts`: Shared constants used across the project.
@@ -40,9 +40,8 @@ This project strictly uses **Bun** as the package manager and runtime for testin
 - Integrations
   - `/src/antigravity/`: Integration layer for Antigravity (e.g., `auth.ts`, `client.ts`).
 
-- CLI & Tools
+- CLI
   - `/src/cli.ts`: Command-line entrypoint (used by package `bin`).
-  - `/src/tools/`: CLI tools and command implementations (e.g., `quotas` tool).
 
 - UI
   - `/src/ui/`: CLI rendering components (`quota-table.ts`, `progress-bar.ts`).
@@ -102,8 +101,8 @@ The plugin follows a **Registry Pattern** to decouple the main command from quot
 4. **Visuals**: Use high-quality ASCII bars for percentage-based limits.
 
 ### Data Flow
-1. `init()`: Instantiate and register providers into `QuotaRegistry`.
-2. `show-quotas`: Retrieve providers, execute `fetchQuota()` in parallel, flatten results.
+1. `QuotaService.init()`: Load config, set up prediction/aggregation, and register providers into `QuotaRegistry`.
+2. Fetching: `QuotaCache` (plugin) or `QuotaService.getQuotas()` (CLI) runs `fetchQuota()` in parallel and flattens results.
 3. Rendering: Display data using `renderQuotaTable`.
 
 ---
@@ -112,7 +111,7 @@ The plugin follows a **Registry Pattern** to decouple the main command from quot
 
 - **Silent Failures**: Providers should catch errors and return an empty array or log a warning.
 - **Console Logging**: DO NOT use `console.log` for debugging or output. Use `logToDebugFile` instead. `console.warn` is acceptable for initialization warnings.
-- **Result Flattening**: `src/index.ts` flattens results from `fetchQuota()`.
+- **Result Flattening**: `src/quota-cache.ts` and `src/services/quota-service.ts` flatten results from `fetchQuota()`.
 
 ---
 
@@ -153,7 +152,7 @@ To add a new provider (e.g., "GitHub"):
     }
     ```
 
-3.  **Register**: Add call to `registry.register(createGitHubProvider())` in `src/index.ts`.
+3.  **Register**: Add call to `registry.register(createGitHubProvider())` in `src/services/quota-service.ts` (inside `QuotaService.registerProviders()`).
 
 ---
 

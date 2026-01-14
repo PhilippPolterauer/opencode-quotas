@@ -191,7 +191,7 @@ export class QuotaService {
         // 2. Apply Aggregation
         results = this.applyAggregation(results);
 
-        // 3. Filter (Disabled & Model Mapping). If requested, perform model-strict filtering.
+        // 3. Filter (disabled quotas + optional model filtering).
         results = this.filterQuotas(results, context);
 
         // 4. Sort

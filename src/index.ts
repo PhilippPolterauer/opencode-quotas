@@ -12,7 +12,6 @@ import {
 } from "./constants";
 import { logger } from "./logger";
 import { getPluginState } from "./plugin-state";
-import { createQuotaTool } from "./tools/quotas";
 
 /**
  * Extended message type with additional fields that may be present at runtime.
@@ -560,11 +559,6 @@ export const QuotaHubPlugin: Plugin = async ({
             }
         },
     };
-
-    // Create the quota tool that can be called by the LLM
-    const quotaTool = createQuotaTool(quotaService, () =>
-        quotaService.getConfig(),
-    );
 
     return hooks;
 };
