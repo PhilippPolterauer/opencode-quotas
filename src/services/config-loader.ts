@@ -90,7 +90,7 @@ export class ConfigLoader {
             target.table = { ...target.table, ...userConfig.table };
         }
         if (userConfig.disabled) {
-            target.disabled = userConfig.disabled;
+            target.disabled = [...userConfig.disabled];
         }
         if (userConfig.filterByCurrentModel !== undefined) {
             target.filterByCurrentModel = userConfig.filterByCurrentModel;
@@ -99,7 +99,7 @@ export class ConfigLoader {
             target.showUnaggregated = userConfig.showUnaggregated;
         }
         if (userConfig.aggregatedGroups) {
-            target.aggregatedGroups = userConfig.aggregatedGroups;
+            target.aggregatedGroups = userConfig.aggregatedGroups.map(g => ({ ...g }));
         }
         if (userConfig.historyMaxAgeHours !== undefined) {
             target.historyMaxAgeHours = userConfig.historyMaxAgeHours;
