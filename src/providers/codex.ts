@@ -3,7 +3,7 @@ import { AUTH_FILE } from "../utils/paths";
 import { type IQuotaProvider, type QuotaData } from "../interfaces";
 import { logger } from "../logger";
 
-const AUTH_PATH = AUTH_FILE();
+
 const DEFAULT_BASE_URL = "https://chatgpt.com/backend-api";
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ERROR_BODY_CHARS = 2_000;
@@ -61,22 +61,15 @@ type RateLimitStatusPayload = {
 };
 
 async function readAuthFile(): Promise<AuthFile | null> {
-  try {
-    const raw = await readFile(AUTH_PATH, "utf8");
-    const parsed = JSON.parse(raw) as AuthFile;
-    return parsed;
-  } catch (e) {
-    logger.debug("provider:codex:auth_read_failed", { authPath: AUTH_PATH, error: e });
-    // Fallback: try the config directory location
     try {
-      const configPath = AUTH_PATH.replace("auth.json", "antigravity-accounts.json");
-      // If the replacement is not valid, this will likely fail and we return null
-      const rawConfig = await readFile(configPath, "utf8");
-      return JSON.parse(rawConfig) as AuthFile;
-    } catch {
-      return null;
+        const authPath = AUTH_FILE();
+        const raw = await readFile(authPath, "utf8");
+        const parsed = JSON.parse(raw) as AuthFile;
+        return parsed;
+    } catch (e) {
+        logger.debug("provider:codex:auth_read_failed", { authPath: AUTH_FILE(), error: e });
+        return null;
     }
-  }
 }
 
 function pickOauthAuth(auth: AuthFile): OauthSelection | null {
@@ -291,13 +284,13 @@ export function createCodexProvider(): IQuotaProvider {
   return {
     id: "codex",
     async fetchQuota(): Promise<QuotaData[]> {
-      logger.debug("provider:codex:fetch_start", { authPath: AUTH_PATH });
+      logger.debug("provider:codex:fetch_start", { authPath: AUTH_FILE() });
 
       const auth = await readAuthFile();
       if (!auth) {
-        logger.debug("provider:codex:no_auth", { authPath: AUTH_PATH });
-        throw new Error("Codex auth.json not found");
-      }
+            logger.debug("provider:codex:no_auth", { authPath: AUTH_FILE() });
+            throw new Error("Codex auth.json not found");
+        }
 
       const oauth = pickOauthAuth(auth);
       if (!oauth) {
