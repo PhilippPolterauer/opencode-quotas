@@ -44,7 +44,7 @@ describe("ConfigLoader", () => {
             expect(config.progressBar?.gradients).toEqual(DEFAULT_CONFIG.progressBar?.gradients);
         });
 
-        test("merges aggregatedGroups arrays", () => {
+        test("replaces default aggregatedGroups when provided in initial config", () => {
             const customGroup = {
                 id: "custom",
                 name: "Custom Group",
@@ -53,9 +53,22 @@ describe("ConfigLoader", () => {
             const config = ConfigLoader.createConfig({
                 aggregatedGroups: [customGroup],
             });
-            // Should have default groups plus custom group
-            expect(config.aggregatedGroups?.length).toBeGreaterThan(1);
-            expect(config.aggregatedGroups).toContainEqual(customGroup);
+            // Should only have custom group, not defaults
+            expect(config.aggregatedGroups?.length).toBe(1);
+            expect(config.aggregatedGroups).toEqual([customGroup]);
+        });
+
+        test("clones default aggregatedGroups to avoid mutating DEFAULT_CONFIG", () => {
+            const config = ConfigLoader.createConfig();
+            const originalLength = DEFAULT_CONFIG.aggregatedGroups?.length || 0;
+            // mutate returned config
+            config.aggregatedGroups?.push({
+                id: "temp",
+                name: "Temp",
+                sources: ["x"],
+                strategy: "max"
+            });
+            expect(DEFAULT_CONFIG.aggregatedGroups?.length).toBe(originalLength);
         });
     });
 

@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1-beta] - 2026-01-13
+## [Unreleased]
+
+### Planned
+
+- [ ] Local Provider pattern for `/quotas` command (pending platform support)
+- [ ] GitHub Copilot detailed usage (pending API availability)
+- [ ] Web-based configuration UI
+
+## [0.0.1] - 2026-01-13
 
 ### Added
 
@@ -37,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Environment variable support (`OPENCODE_QUOTAS_CONFIG_PATH`, `NO_COLOR`)
   - Model-to-quota mapping for context-aware filtering
   - Configurable history retention and polling intervals
+  - `showUnaggregated` option to display raw provider data alongside aggregated groups
 
 - **Developer Experience**
   - Comprehensive test suite (46 tests)
@@ -54,13 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TypeScript configuration properly includes Node.js types
 - Extended message interface handles optional SDK fields correctly
 - Concurrency tests verify exactly-once message processing
-
----
-
-## [Unreleased]
-
-### Planned
-
-- [ ] Local Provider pattern for `/quotas` command (pending platform support)
-- [ ] GitHub Copilot detailed usage (pending API availability)
-- [ ] Web-based configuration UI
+- Race condition in `QuotaCache` initialization
+- Memory leak in `PluginState` cleanup
+- Synchronous file operations in GitHub provider blocking the event loop
+- Silent errors in `HistoryService`

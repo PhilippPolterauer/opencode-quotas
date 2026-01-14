@@ -21,11 +21,12 @@ export class ConfigLoader {
         if (DEFAULT_CONFIG.progressBar) {
             config.progressBar = { ...DEFAULT_CONFIG.progressBar, ...initialConfig?.progressBar };
         }
-        if (DEFAULT_CONFIG.aggregatedGroups) {
-            config.aggregatedGroups = [
-                ...DEFAULT_CONFIG.aggregatedGroups, 
-                ...(initialConfig?.aggregatedGroups || [])
-            ];
+        // Aggregated groups: if provided in the initial config, replace defaults;
+        // otherwise clone the defaults to avoid mutating the constant.
+        if (initialConfig?.aggregatedGroups !== undefined) {
+            config.aggregatedGroups = initialConfig.aggregatedGroups.map(g => ({ ...g }));
+        } else if (DEFAULT_CONFIG.aggregatedGroups) {
+            config.aggregatedGroups = DEFAULT_CONFIG.aggregatedGroups.map(g => ({ ...g }));
         }
         
         return config;
