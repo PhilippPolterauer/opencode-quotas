@@ -34,18 +34,28 @@ This document outlines the requirements and architectural design for the `openco
 ```mermaid
 graph TD
     subgraph OpenCode Platform
-        User -->|chat.footer| Main
+        User -->|session.idle| Main
     end
 
     subgraph Quota Plugin
         Main[index.ts] --> Service[QuotaService]
+        Main --> Cache[QuotaCache]
         CLI[cli.ts] --> Service
+        
         Service --> Registry[registry.ts]
-        Service --> History[HistoryService]
-        Service --> Cache[QuotaCache]
+        Service --> Aggregation[AggregationService]
+        Service --> Prediction[PredictionEngine]
+        
+        Prediction --> History[HistoryService]
+        Cache -->|feeds snapshots| History
+        Cache -->|polls| P1
+        Cache -->|polls| P2
+        Cache -->|polls| P3
+        
         Registry --> P1[Antigravity Provider]
         Registry --> P2[Codex Provider]
         Registry --> P3[GitHub Provider - Experimental]
+        
         Main --> UI[quota-table.ts]
         UI --> PB[progress-bar.ts]
     end
@@ -59,10 +69,10 @@ graph TD
 
 ### Data Flow
 
-1. **Initialization**: `QuotaService.init()` loads config and registers providers
-2. **Caching**: `QuotaCache` polls providers at configurable intervals
-3. **History**: `HistoryService` persists usage snapshots for prediction
-4. **Processing**: `QuotaService.processQuotas()` enriches, aggregates, filters, and sorts
+1. **Initialization**: `QuotaService.init()` loads config, initializes `PredictionEngine` and `AggregationService`, and registers providers
+2. **Caching**: `QuotaCache` polls providers at configurable intervals and stores snapshots
+3. **History**: `QuotaCache` feeds `HistoryService` with usage snapshots for trend analysis
+4. **Processing**: `QuotaService.processQuotas()` enriches quotas with predictions (via `PredictionEngine`), applies aggregation (via `AggregationService`), filters, and sorts
 5. **Queueing**: The `experimental.text.complete` hook records the latest assistant message for the session
 6. **Rendering**: On `session.idle`, the plugin patches the final text part with `renderQuotaTable()` output
 
@@ -108,11 +118,11 @@ interface IQuotaRegistry {
 
 ### QuotaService
 
-Centralized service for:
-- Configuration management
-- Provider coordination
-- Quota processing (enrichment, aggregation, filtering, sorting)
-- Prediction calculations
+Central orchestrator that manages:
+- Configuration management (via `ConfigLoader`)
+- Provider registration and coordination (via `Registry`)
+- Internal services: `PredictionEngine` and `AggregationService`
+- Quota processing pipeline: enrichment, aggregation, filtering, sorting
 
 ### QuotaCache
 
@@ -120,6 +130,30 @@ Background caching layer:
 - Polls providers at configurable intervals
 - Stores snapshots for immediate access
 - Feeds history service for predictions
+
+### HistoryService
+
+Persistent storage for usage history:
+- Stores timestamped usage snapshots locally
+- Provides historical data for prediction calculations
+- Automatic pruning based on configurable max age
+- Debounced writes to disk for performance
+
+### PredictionEngine
+
+Dual-window linear regression for time-to-limit predictions:
+- Calculates long-window slope for overall trend analysis
+- Calculates short-window slope to capture recent usage spikes
+- Uses conservative estimation (max of both slopes)
+- Idle detection to avoid false predictions during inactivity
+
+### AggregationService
+
+Aggregates multiple quotas into representative values:
+- Supports multiple strategies: `most_critical`, `max`, `min`, `mean`, `median`
+- Pattern-based source matching for flexible grouping
+- Uses `PredictionEngine` for `most_critical` strategy
+- Creates synthetic quotas for average-based strategies
 
 ---
 
@@ -250,4 +284,4 @@ registry.register(createMyProvider());
 
 ---
 
-_Last Updated: 2026-01-13_
+_Last Updated: 2026-01-14_
