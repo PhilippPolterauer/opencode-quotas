@@ -32,10 +32,22 @@ type ExtendedAssistantMessage = Omit<AssistantMessage, "parentID"> & {
     };
 };
 
+type TextPart = {
+    id: string;
+    type: "text";
+    text: string;
+    ignored?: boolean;
+};
+
 /**
  * QuotaHub Plugin for OpenCode.ai
  */
-export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
+export const QuotaHubPlugin: Plugin = async ({
+    client,
+    $,
+    directory,
+    serverUrl,
+}) => {
     const state = getPluginState();
     const historyService = new HistoryService();
     const quotaService = new QuotaService();
@@ -78,10 +90,258 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
     // Trigger background initialization
     ensureInit().catch(() => {});
 
+    const makeDebugLog = (config: ReturnType<typeof quotaService.getConfig>) => {
+        return (msg: string, data?: any) => {
+            if (config.debug) logger.debug(msg, data);
+        };
+    };
+
+    const buildFooterText = (
+        assistantMsg: ExtendedAssistantMessage,
+        config: ReturnType<typeof quotaService.getConfig>,
+        cache: QuotaCache,
+        debugLog: (msg: string, data?: any) => void,
+    ): { text: string; lineCount: number } | null => {
+        const snapshot = cache.getSnapshot();
+        const rawResults: QuotaData[] = snapshot.data;
+        debugLog("cache:snapshot", {
+            fetchedAt: snapshot.fetchedAt?.toISOString(),
+            totalCount: rawResults.length,
+            hasError: !!snapshot.lastError,
+        });
+        if (rawResults.length === 0) {
+            debugLog("skip:no_cached_quotas", {
+                fetchedAt: snapshot.fetchedAt?.toISOString(),
+                lastError: snapshot.lastError,
+            });
+            return null;
+        }
+
+        const filteredResults = quotaService.processQuotas(rawResults, {
+            providerId: assistantMsg.providerID,
+            modelId: assistantMsg.modelID,
+        });
+
+        debugLog("quotas:processed", {
+            before: rawResults.length,
+            after: filteredResults.length,
+            providerId: assistantMsg.providerID,
+            modelId: assistantMsg.modelID,
+        });
+
+        if (filteredResults.length === 0) {
+            debugLog("skip:all_quotas_filtered", {
+                providerId: assistantMsg.providerID,
+                modelId: assistantMsg.modelID,
+            });
+            return null;
+        }
+
+        const lines = renderQuotaTable(filteredResults, {
+            progressBarConfig: config.progressBar,
+            tableConfig: config.table,
+        }).map((l) => l.line);
+
+        const showMode = config.progressBar?.show ?? "used";
+        const modeLabel = showMode === "available" ? "(Remaining)" : "(Used)";
+        const showTitle = config.showFooterTitle !== false;
+        const titleText = showTitle
+            ? `${PLUGIN_FOOTER_SIGNATURE} ${modeLabel}_\n`
+            : "";
+
+        return {
+            text: "\n\n" + titleText + lines.join("\n"),
+            lineCount: lines.length,
+        };
+    };
+
+    const findLatestTextPart = (parts: Array<{ type?: string }>): TextPart | null => {
+        for (let i = parts.length - 1; i >= 0; i -= 1) {
+            const part = parts[i] as TextPart;
+            if (part?.type === "text" && !part.ignored) {
+                return part;
+            }
+        }
+        return null;
+    };
+
+    const updateTextPart = async (
+        sessionID: string,
+        messageID: string,
+        partID: string,
+        part: TextPart,
+    ): Promise<void> => {
+        const url = new URL(
+            `/session/${sessionID}/message/${messageID}/part/${partID}`,
+            serverUrl,
+        );
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+        };
+        if (directory) {
+            headers["x-opencode-directory"] = directory;
+        }
+        const response = await fetch(url, {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({ part }),
+        });
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => "");
+            logger.error("part:update_failed", {
+                sessionID,
+                messageID,
+                partID,
+                status: response.status,
+                error: errorText,
+            });
+        }
+    };
+
     const hooks: Hooks = {
+        event: async ({ event }): Promise<void> => {
+            if (event.type !== "session.idle") return;
+
+            await ensureInit().catch((e) => {
+                logger.error("init:error", { error: e });
+            });
+            if (!quotaCache) {
+                const config = quotaService.getConfig();
+                if (config.debug)
+                    logger.debug("hook:no_cache", {
+                        sessionID: event.properties.sessionID,
+                    });
+                return;
+            }
+
+            const cache = quotaCache;
+            const config = quotaService.getConfig();
+            const debugLog = makeDebugLog(config);
+            const sessionID = event.properties.sessionID;
+
+            if (config.footer === false) {
+                debugLog("skip:footer_disabled", {
+                    sessionID,
+                });
+                return;
+            }
+
+            const pending = state.getPending(sessionID);
+            if (!pending) {
+                debugLog("idle:no_pending", { sessionID });
+                return;
+            }
+
+            if (state.isProcessed(pending.messageID)) {
+                debugLog("idle:already_processed", {
+                    messageID: pending.messageID,
+                });
+                state.clearPending(sessionID);
+                return;
+            }
+
+            const release = await state.acquireLock(pending.messageID);
+            debugLog("lock:acquired_idle", {
+                messageID: pending.messageID,
+            });
+
+            try {
+                if (state.isProcessed(pending.messageID)) {
+                    debugLog("idle:already_processed_after_lock", {
+                        messageID: pending.messageID,
+                    });
+                    state.clearPending(sessionID);
+                    return;
+                }
+
+                const { data: messages } = await client.session.messages({
+                    path: { id: sessionID },
+                    query: { limit: 1 },
+                });
+
+                const latest = messages?.[0];
+                if (!latest) {
+                    debugLog("idle:no_latest_message", { sessionID });
+                    state.clearPending(sessionID);
+                    return;
+                }
+
+                if (latest.info.role !== "assistant") {
+                    debugLog("idle:latest_not_assistant", {
+                        sessionID,
+                        role: latest.info.role,
+                    });
+                    state.clearPending(sessionID);
+                    return;
+                }
+
+                if (latest.info.id !== pending.messageID) {
+                    debugLog("idle:pending_stale", {
+                        sessionID,
+                        pendingMessageID: pending.messageID,
+                        latestMessageID: latest.info.id,
+                    });
+                    state.clearPending(sessionID);
+                    return;
+                }
+
+                const assistantMsg = latest.info as ExtendedAssistantMessage;
+                const textPart = findLatestTextPart(latest.parts);
+                if (!textPart) {
+                    debugLog("idle:no_text_part", {
+                        messageID: latest.info.id,
+                    });
+                    state.clearPending(sessionID);
+                    return;
+                }
+
+                if (textPart.text.includes(PLUGIN_FOOTER_SIGNATURE)) {
+                    debugLog(SKIP_REASONS.FOOTER_PRESENT, {
+                        messageID: latest.info.id,
+                    });
+                    state.markProcessed(pending.messageID);
+                    state.clearPending(sessionID);
+                    return;
+                }
+
+                const footer = buildFooterText(
+                    assistantMsg,
+                    config,
+                    cache,
+                    debugLog,
+                );
+                if (!footer) {
+                    state.clearPending(sessionID);
+                    return;
+                }
+
+                await updateTextPart(sessionID, latest.info.id, textPart.id, {
+                    ...textPart,
+                    text: textPart.text + footer.text,
+                });
+
+                state.markProcessed(pending.messageID);
+                state.clearPending(sessionID);
+                debugLog("inject:footer", {
+                    messageID: latest.info.id,
+                    lines: footer.lineCount,
+                    source: "session.idle",
+                });
+            } catch (e) {
+                logger.error("idle:inject_failed", {
+                    sessionID,
+                    error: e,
+                });
+            } finally {
+                debugLog("lock:release_idle", {
+                    messageID: pending.messageID,
+                });
+                release();
+            }
+        },
         /**
          * The platform calls this hook after a text generation is complete.
-         * We use it to append quota information to the end of the final assistant message.
+         * We use it to queue quota injection for the session idle event.
          */
         "experimental.text.complete": async (
             input: {
@@ -108,9 +368,7 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
 
             const cache = quotaCache;
             const config = quotaService.getConfig();
-            const debugLog = (msg: string, data?: any) => {
-                if (config.debug) logger.debug(msg, data);
-            };
+            const debugLog = makeDebugLog(config);
 
             if (config.footer === false) {
                 debugLog("skip:footer_disabled", {
@@ -123,11 +381,19 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
             debugLog("hook:experimental.text.complete", {
                 input,
                 processed: state.isProcessed(input.messageID),
+                pending: state.isPending(input.messageID),
             });
 
             // Fast path check
             if (state.isProcessed(input.messageID)) {
                 debugLog("skip:already_processed", {
+                    messageID: input.messageID,
+                });
+                return;
+            }
+
+            if (state.isPending(input.messageID)) {
+                debugLog("skip:already_pending", {
                     messageID: input.messageID,
                 });
                 return;
@@ -151,6 +417,13 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 // After acquiring lock, re-check if processed
                 if (state.isProcessed(input.messageID)) {
                     debugLog("skip:already_processed_after_lock", {
+                        messageID: input.messageID,
+                    });
+                    return;
+                }
+
+                if (state.isPending(input.messageID)) {
+                    debugLog("skip:already_pending_after_lock", {
                         messageID: input.messageID,
                     });
                     return;
@@ -183,10 +456,6 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                 }
 
                 const assistantMsg = result.info as ExtendedAssistantMessage;
-
-                // Mark as processed as soon as we've identified it's an assistant message
-                // We do this before the quota check to avoid race conditions if no quotas are found.
-                state.markProcessed(input.messageID);
 
                 // Log message details
                 debugLog("message:details", {
@@ -265,62 +534,22 @@ export const QuotaHubPlugin: Plugin = async ({ client, $, directory }) => {
                     }
                 }
 
-                const snapshot = cache.getSnapshot();
-                const rawResults: QuotaData[] = snapshot.data;
-                debugLog("cache:snapshot", {
-                    fetchedAt: snapshot.fetchedAt?.toISOString(),
-                    totalCount: rawResults.length,
-                    hasError: !!snapshot.lastError,
-                });
-                if (rawResults.length === 0) {
-                    debugLog("skip:no_cached_quotas", {
-                        fetchedAt: snapshot.fetchedAt?.toISOString(),
-                        lastError: snapshot.lastError,
-                    });
+                const footer = buildFooterText(
+                    assistantMsg,
+                    config,
+                    cache,
+                    debugLog,
+                );
+                if (!footer) {
                     return;
                 }
 
-                // Process (filter, sort) using the shared service
-                const filteredResults = quotaService.processQuotas(rawResults, {
-                    providerId: assistantMsg.providerID,
-                    modelId: assistantMsg.modelID,
-                });
-
-                debugLog("quotas:processed", {
-                    before: rawResults.length,
-                    after: filteredResults.length,
-                    providerId: assistantMsg.providerID,
-                    modelId: assistantMsg.modelID,
-                });
-
-                if (filteredResults.length === 0) {
-                    debugLog("skip:all_quotas_filtered", {
-                        providerId: assistantMsg.providerID,
-                        modelId: assistantMsg.modelID,
-                    });
-                    return;
-                }
-
-                const lines = renderQuotaTable(filteredResults, {
-                    progressBarConfig: config.progressBar,
-                    tableConfig: config.table,
-                }).map((l) => l.line);
-
-                // Append to message text
-                const showMode = config.progressBar?.show ?? "used";
-                const modeLabel =
-                    showMode === "available" ? "(Remaining)" : "(Used)";
-                // Build visible header only if enabled in config
-                const showTitle = config.showFooterTitle !== false;
-                const titleText = showTitle
-                    ? `${PLUGIN_FOOTER_SIGNATURE} ${modeLabel}_\n`
-                    : "";
-
-                // Append table lines (no invisible marker)
-                output.text += "\n\n" + titleText + lines.join("\n");
-                debugLog("inject:footer", {
+                state.setPending(input.sessionID, input.messageID, input.partID);
+                debugLog("pending:queued", {
                     messageID: input.messageID,
-                    lines: lines.length,
+                    partID: input.partID,
+                    sessionID: input.sessionID,
+                    lines: footer.lineCount,
                 });
             } finally {
                 debugLog("lock:release", { messageID: input.messageID });

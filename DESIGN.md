@@ -9,7 +9,7 @@ This document outlines the requirements and architectural design for the `openco
 | Requirement | Description |
 |-------------|-------------|
 | **Aggregate Quotas** | Retrieve quota data from multiple independent providers (Antigravity, Codex, etc.) |
-| **Message Footer Injection** | Automatically render quotas in the chat footer after each final assistant response |
+| **Message Footer Injection** | Automatically render quotas in the chat footer after the session reaches its final assistant response |
 | **Visual Representation** | Display percentage-based quotas using ASCII progress bars with ANSI color gradients |
 | **Pattern-Based Aggregation** | Group raw quotas into logical categories using pattern matching at the service layer |
 | **Predictive Aggregation** | Group related quotas and predict which one will hit its limit first using linear regression |
@@ -63,7 +63,8 @@ graph TD
 2. **Caching**: `QuotaCache` polls providers at configurable intervals
 3. **History**: `HistoryService` persists usage snapshots for prediction
 4. **Processing**: `QuotaService.processQuotas()` enriches, aggregates, filters, and sorts
-5. **Rendering**: `renderQuotaTable()` produces formatted output
+5. **Queueing**: The `experimental.text.complete` hook records the latest assistant message for the session
+6. **Rendering**: On `session.idle`, the plugin patches the final text part with `renderQuotaTable()` output
 
 ---
 
@@ -177,9 +178,11 @@ Available columns: `status`, `name`, `bar`, `percent`, `value`, `reset`, `window
 
 The plugin uses multiple safeguards to prevent duplicate footer injection:
 
-1. **PluginState**: Tracks processed message IDs
-2. **Lock Acquisition**: Serializes processing per message
-3. **Text Check**: Verifies footer signature before injection
+1. **Pending Queue**: The text-complete hook stores the latest assistant message per session
+2. **Session Idle Hook**: Injection only occurs once the session signals idle
+3. **PluginState**: Tracks processed and pending message IDs
+4. **Lock Acquisition**: Serializes processing per message
+5. **Text Check**: Verifies footer signature before injection
 
 ### Provider Isolation
 

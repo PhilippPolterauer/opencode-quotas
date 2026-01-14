@@ -45,7 +45,7 @@ Add `opencode-quotas` to your OpenCode configuration file (typically `~/.opencod
 
 ## Usage
 
-Once installed and registered, a live quota summary is automatically appended to every assistant message footer in OpenCode. No further action is required.
+Once installed and registered, a live quota summary is automatically appended to the final assistant response footer in OpenCode. The plugin waits for the session to go idle before injecting to avoid duplicate footers during multi-step runs.
 
 ### CLI Mode (Optional)
 

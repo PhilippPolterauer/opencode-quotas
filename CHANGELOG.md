@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Correct README to reflect `filterByCurrentModel` default is `false` (DOC-001)
+- Defer quota footer injection until `session.idle` to avoid duplicate footers across multi-step responses.
 
 ## [0.0.1] - 2026-01-13
 
