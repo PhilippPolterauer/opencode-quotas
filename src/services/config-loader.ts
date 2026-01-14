@@ -80,6 +80,9 @@ export class ConfigLoader {
         if (userConfig.footer !== undefined) {
             target.footer = userConfig.footer;
         }
+        if (userConfig.showFooterTitle !== undefined) {
+            target.showFooterTitle = userConfig.showFooterTitle;
+        }
         if (userConfig.progressBar) {
             target.progressBar = { ...target.progressBar, ...userConfig.progressBar };
         }
