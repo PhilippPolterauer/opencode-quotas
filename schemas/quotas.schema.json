@@ -1,186 +1,216 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Opencode Quotas Configuration",
-  "description": "Configuration schema for the Opencode Quotas plugin.",
-  "type": "object",
-  "properties": {
-    "displayMode": {
-      "type": "string",
-      "enum": ["simple", "detailed", "hidden"],
-      "default": "simple",
-      "description": "How to display the quotas."
-    },
-    "progressBar": {
-      "type": "object",
-      "description": "Configuration for the ASCII progress bar.",
-      "properties": {
-        "width": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Width of the progress bar in characters."
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Opencode Quotas Configuration",
+    "description": "Configuration schema for the Opencode Quotas plugin.",
+    "type": "object",
+    "properties": {
+        "displayMode": {
+            "type": "string",
+            "enum": ["simple", "detailed", "hidden"],
+            "default": "simple",
+            "description": "How to display the quotas."
         },
-        "filledChar": {
-          "type": "string",
-          "description": "Character used for the filled portion of the bar."
-        },
-        "emptyChar": {
-          "type": "string",
-          "description": "Character used for the empty portion of the bar."
-        },
-        "show": {
-          "type": "string",
-          "enum": ["used", "available"],
-          "description": "Whether to show used or available percentage."
-        },
-        "color": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable ANSI colors."
-        },
-        "gradients": {
-          "type": "array",
-          "description": "Color gradients based on usage thresholds.",
-          "items": {
+        "progressBar": {
             "type": "object",
+            "description": "Configuration for the ASCII progress bar.",
             "properties": {
-              "threshold": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1,
-                "description": "Threshold (0-1) at which this color applies."
-              },
-              "color": {
-                "type": "string",
-                "enum": ["red", "green", "yellow", "blue", "magenta", "cyan", "white", "gray", "bold", "dim", "reset"],
-                "description": "ANSI color code name."
-              }
-            },
-            "required": ["threshold", "color"]
-          }
-        }
-      }
-    },
-    "table": {
-      "type": "object",
-      "description": "Configuration for the quota table.",
-      "properties": {
-        "columns": {
-          "type": "array",
-          "description": "Columns to display in the table.",
-          "items": {
-            "type": "string",
-            "enum": ["name", "bar", "percent", "value", "reset", "window", "info", "status", "ettl"]
-          }
+                "width": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Width of the progress bar in characters."
+                },
+                "filledChar": {
+                    "type": "string",
+                    "description": "Character used for the filled portion of the bar."
+                },
+                "emptyChar": {
+                    "type": "string",
+                    "description": "Character used for the empty portion of the bar."
+                },
+                "show": {
+                    "type": "string",
+                    "enum": ["used", "available"],
+                    "description": "Whether to show used or available percentage."
+                },
+                "color": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable ANSI colors."
+                },
+                "gradients": {
+                    "type": "array",
+                    "description": "Color gradients based on usage thresholds.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "threshold": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                                "description": "Threshold (0-1) at which this color applies."
+                            },
+                            "color": {
+                                "type": "string",
+                                "enum": [
+                                    "red",
+                                    "green",
+                                    "yellow",
+                                    "blue",
+                                    "magenta",
+                                    "cyan",
+                                    "white",
+                                    "gray",
+                                    "bold",
+                                    "dim",
+                                    "reset"
+                                ],
+                                "description": "ANSI color code name."
+                            }
+                        },
+                        "required": ["threshold", "color"]
+                    }
+                }
+            }
         },
-        "header": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether to render the table header row (column labels)."
-        }
-      }
-    },
-    "footer": {
-      "type": "boolean",
-      "default": true,
-      "description": "Whether to show quotas in the chat footer automatically."
-    },
-    "showFooterTitle": {
-      "type": "boolean",
-      "default": true,
-      "description": "Whether to show the plugin title/header in the footer."
-    },
+        "table": {
+            "type": "object",
+            "description": "Configuration for the quota table.",
+            "properties": {
+                "columns": {
+                    "type": "array",
+                    "description": "Columns to display in the table.",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "name",
+                            "bar",
+                            "percent",
+                            "value",
+                            "reset",
+                            "window",
+                            "info",
+                            "status",
+                            "ettl"
+                        ]
+                    }
+                },
+                "header": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to render the table header row (column labels)."
+                }
+            }
+        },
+        "footer": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to show quotas in the chat footer automatically."
+        },
+        "showFooterTitle": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to show the plugin title/header in the footer."
+        },
 
-    "disabled": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "List of quota IDs to hide from display."
-    },
-    "filterByCurrentModel": {
-      "type": "boolean",
-      "default": false,
-      "description": "Only show quotas relevant to the current model (best-effort matching)."
-    },
-    "debug": {
-      "type": "boolean",
-      "default": false,
-      "description": "Enable debug logging."
-    },
-    "enableExperimentalGithub": {
-      "type": "boolean",
-      "default": false,
-      "description": "Enable the experimental GitHub Copilot provider (disabled by default)."
-    },
-    "aggregatedGroups": {
-      "type": "array",
-      "description": "Optional aggregation groups to combine multiple quotas.",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Unique ID for the aggregated group."
-          },
-          "name": {
-            "type": "string",
-            "description": "Display name."
-          },
-          "sources": {
+        "disabled": {
             "type": "array",
             "items": {
-              "type": "string"
+                "type": "string"
             },
-            "description": "IDs of quotas to aggregate."
-          },
-          "patterns": {
+            "description": "List of quota IDs to hide from display."
+        },
+        "filterByCurrentModel": {
+            "type": "boolean",
+            "default": false,
+            "description": "Only show quotas relevant to the current model (best-effort matching)."
+        },
+        "debug": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable debug logging."
+        },
+        "enableExperimentalGithub": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable the experimental GitHub Copilot provider (disabled by default)."
+        },
+        "aggregatedGroups": {
             "type": "array",
-            "items": { "type": "string" },
-            "description": "Regex or glob patterns to match quota IDs or provider names."
-          },
-          "providerId": {
-            "type": "string",
-            "description": "Optional provider ID to scope pattern matches to a single provider."
-          },
-          "strategy": {
-            "type": "string",
-            "enum": ["most_critical", "min", "max", "mean", "median"],
-            "default": "most_critical",
-            "description": "Strategy for aggregation."
-          },
-          "predictionWindowMinutes": {
+            "description": "Optional aggregation groups to combine multiple quotas.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique ID for the aggregated group."
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Display name."
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "IDs of quotas to aggregate."
+                    },
+                    "patterns": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Patterns to match against raw quota IDs/names"
+                    },
+                    "providerId": {
+                        "type": "string",
+                        "description": "Limit pattern matching to specific provider"
+                    },
+                    "strategy": {
+                        "type": "string",
+                        "enum": [
+                            "most_critical",
+                            "min",
+                            "max",
+                            "mean",
+                            "median"
+                        ],
+                        "default": "most_critical",
+                        "description": "Strategy for aggregation."
+                    },
+                    "predictionWindowMinutes": {
+                        "type": "number",
+                        "default": 60,
+                        "description": "Time window for regression analysis (minutes)."
+                    },
+                    "predictionShortWindowMinutes": {
+                        "type": "number",
+                        "default": 5,
+                        "description": "Short time window for capturing spikes (minutes)."
+                    }
+                },
+                "required": ["id", "name"]
+            }
+        },
+        "historyMaxAgeHours": {
             "type": "number",
-            "default": 60,
-            "description": "Time window for regression analysis (minutes)."
-          },
-          "predictionShortWindowMinutes": {
+            "default": 24,
+            "description": "Max history age in hours."
+        },
+        "pollingInterval": {
+            "type": "number",
+            "default": 60000,
+            "description": "Polling interval in milliseconds."
+        },
+        "predictionShortWindowMinutes": {
             "type": "number",
             "default": 5,
-            "description": "Short time window for capturing spikes (minutes)."
-          }
+            "description": "Short time window for regression to capture spikes (minutes)."
         },
-        "required": ["id", "name"],
-      }
-    },
-    "historyMaxAgeHours": {
-      "type": "number",
-      "default": 24,
-      "description": "Max history age in hours."
-    },
-    "pollingInterval": {
-      "type": "number",
-      "default": 60000,
-      "description": "Polling interval in milliseconds."
-    },
-    "predictionShortWindowMinutes": {
-      "type": "number",
-      "default": 5,
-      "description": "Short time window for regression to capture spikes (minutes)."
-    },
-    "showUnaggregated": {
-      "type": "boolean",
-      "default": true,
-      "description": "Whether to show quotas that did not match any aggregation group."
+        "showUnaggregated": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to show quotas that did not match any aggregation group."
+        }
     }
-  }
 }
