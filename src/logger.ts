@@ -1,6 +1,4 @@
 import { appendFile } from "node:fs/promises";
-import { join } from "node:path";
-import { homedir } from "node:os";
 import { DEBUG_LOG_FILE } from "./utils/paths";
 import { inspect } from "node:util";
 
