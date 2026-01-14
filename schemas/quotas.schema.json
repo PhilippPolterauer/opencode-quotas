@@ -89,30 +89,7 @@
       "default": true,
       "description": "Whether to show the plugin title/header in the footer."
     },
-    "groups": {
-      "type": "object",
-      "description": "Optional grouping definitions per provider ID.",
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "Display name for the group."
-            },
-            "patterns": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "List of string patterns to match against model names."
-            }
-          },
-          "required": ["name", "patterns"]
-        }
-      }
-    },
+
     "disabled": {
       "type": "array",
       "items": {
@@ -156,6 +133,15 @@
             },
             "description": "IDs of quotas to aggregate."
           },
+          "patterns": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Regex or glob patterns to match quota IDs or provider names."
+          },
+          "providerId": {
+            "type": "string",
+            "description": "Optional provider ID to scope pattern matches to a single provider."
+          },
           "strategy": {
             "type": "string",
             "enum": ["most_critical", "min", "max", "mean", "median"],
@@ -173,7 +159,7 @@
             "description": "Short time window for capturing spikes (minutes)."
           }
         },
-        "required": ["id", "name", "sources"]
+        "required": ["id", "name"],
       }
     },
     "historyMaxAgeHours": {
