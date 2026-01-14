@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
 
+### Fixed
+
+- Correct README to reflect `filterByCurrentModel` default is `false` (DOC-001)
+
 ## [0.0.1] - 2026-01-13
 
 ### Added

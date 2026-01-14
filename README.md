@@ -91,11 +91,11 @@ All configuration is done via `.opencode/quotas.json` in your project root. Sett
 
 ### Model Filtering
 
-By default, `filterByCurrentModel` is enabled, showing only quotas relevant to the active model.
+By default, `filterByCurrentModel` is disabled (false). Enable it to show only quotas relevant to the active model.
 
 ```json
 {
-  "filterByCurrentModel": true
+  "filterByCurrentModel": false
 }
 ```
 
@@ -312,7 +312,7 @@ See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JS
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `footer` | boolean | `true` | Show quotas in chat footer |
-| `filterByCurrentModel` | boolean | `true` | Filter quotas by active model |
+| `filterByCurrentModel` | boolean | `false` | Filter quotas by active model |
 | `modelMapping` | object | (see defaults) | Explicit model-to-quota mappings |
 | `disabled` | string[] | `[]` | Quota IDs to hide |
 | `progressBar.color` | boolean | `true` | Enable ANSI colors |
