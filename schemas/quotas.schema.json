@@ -207,6 +207,11 @@
             "default": 5,
             "description": "Short time window for regression to capture spikes (minutes)."
         },
+        "predictionWindowMinutes": {
+            "type": "number",
+            "default": 60,
+            "description": "Time window for regression analysis (minutes)."
+        },
         "showUnaggregated": {
             "type": "boolean",
             "default": true,

@@ -298,13 +298,16 @@ See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JS
 | `footer` | boolean | `true` | Show quotas in chat footer |
 | `filterByCurrentModel` | boolean | `false` | Filter quotas by active model |
 | `disabled` | string[] | `[]` | Quota IDs to hide |
-| `progressBar.color` | boolean | `true` | Enable ANSI colors |
+| `progressBar.color` | boolean | `false` | Enable ANSI colors |
 | `progressBar.width` | number | `20` | Progress bar character width |
 | `progressBar.show` | string | `"used"` | `"used"` or `"available"` |
 | `table.columns` | string[] | (auto) | Columns to display |
 | `table.header` | boolean | `true` | Show column headers |
 | `aggregatedGroups` | array | (see defaults) | Quota aggregation with patterns or sources |
+| `historyMaxAgeHours` | number | `24` | Max history age in hours |
 | `pollingInterval` | number | `60000` | Refresh interval in ms |
+| `predictionWindowMinutes` | number | `60` | Time window for regression analysis (minutes) |
+| `predictionShortWindowMinutes` | number | `5` | Short time window for spikes (minutes) |
 | `debug` | boolean | `false` | Enable debug logging |
 
 ## Security

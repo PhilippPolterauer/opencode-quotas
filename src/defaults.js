@@ -18,6 +18,7 @@ export const DEFAULT_CONFIG = {
     },
     filterByCurrentModel: false,
     showUnaggregated: true,
+    predictionWindowMinutes: 60,
     aggregatedGroups: [
         {
             id: "ag-flash",

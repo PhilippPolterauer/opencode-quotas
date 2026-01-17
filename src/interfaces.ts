@@ -96,6 +96,10 @@ export interface QuotaConfig {
      */
     predictionShortWindowMinutes?: number;
     /**
+     * Time window for regression analysis (minutes). Defaults to 60.
+     */
+    predictionWindowMinutes?: number;
+    /**
      * Whether to show quotas that did not match any aggregation group.
      * Defaults to true.
      */

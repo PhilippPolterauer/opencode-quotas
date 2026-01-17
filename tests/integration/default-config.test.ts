@@ -30,8 +30,11 @@ describe("Default Configuration", () => {
         expect(config.debug).toBe(false);
         expect(config.pollingInterval).toBe(60000);
         
-        // Match README: Default is true
-        expect(config.progressBar?.color).toBe(true);
+        // Match README: Default is false (changed from true)
+        expect(config.progressBar?.color).toBe(false);
+        
+        // Match new predictionWindowMinutes default
+        expect(config.predictionWindowMinutes).toBe(60);
         
         // Table defaults
         expect(config.table?.header).toBe(true);
