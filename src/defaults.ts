@@ -6,7 +6,7 @@ export const DEFAULT_CONFIG: QuotaConfig = {
     footer: true,
     showFooterTitle: true,
     debug: false,
-    enableExperimentalGithub: false,
+    enableExperimentalGithub: false, // Set to true to enable experimental GitHub Copilot support
     progressBar: {
         color: false,
         gradients: [

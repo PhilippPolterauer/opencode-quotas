@@ -6,7 +6,7 @@ export const DEFAULT_CONFIG = {
     debug: false,
     enableExperimentalGithub: false,
     progressBar: {
-        color: false,
+        color: true,
         gradients: [
             { threshold: 0.5, color: "green" },
             { threshold: 0.8, color: "yellow" },

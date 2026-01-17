@@ -67,7 +67,7 @@ opencode-quotas --provider google --model antigravity-gemini-3-flash
 | :--- | :--- | :--- | :--- |
 | **Antigravity** | `ag-raw-*` | `ag-flash`, `ag-pro`, `ag-premium` | Raw model quotas aggregated by pattern into Flash, Pro, and Premium tiers. |
 | **Codex** | `codex-primary`, `codex-secondary` | `codex-smart` | Rate limits aggregated using most-critical strategy. |
-| **GitHub Copilot** | — | — | ⚠️ Experimental (disabled by default). |
+| **GitHub Copilot** | — | — | ⚠️ Experimental (requires `enableExperimentalGithub: true` in config, disabled by default) |
 
 > **Note**: Quota IDs are used in configuration options like `disabled`.
 
