@@ -39,7 +39,7 @@ function shouldUseColor(config?: ProgressBarConfig): boolean {
   // If not a TTY, generally disable color
   if (!process.stdout.isTTY) return false;
 
-  return false;
+  return true;
 }
 
 export function colorize(text: string, color: AnsiColor | undefined, useColor: boolean): string {

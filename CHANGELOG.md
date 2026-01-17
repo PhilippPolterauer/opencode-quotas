@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Integration tests for default configuration behavior to prevent documentation drift (TEST-001)
+
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)
@@ -15,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Changed `progressBar.color` default to `true` to match README documentation.
+- Fixed `shouldUseColor` to correctly default to `true` when running in a TTY environment.
 - Correct README to reflect `filterByCurrentModel` default is `false` (DOC-001)
 - Defer quota footer injection until `session.idle` to avoid duplicate footers across multi-step responses.
 - Fix overlapping aggregation patterns where general tokens (e.g. `gemini`) could match multiple groups; make pattern matching token-aware and support regex/glob patterns (BUG-003)
