@@ -1,4 +1,4 @@
-import { expect, test, describe, spyOn, beforeEach, afterEach, mock } from "bun:test";
+import { expect, test, describe, spyOn, beforeEach, afterEach } from "bun:test";
 import { HistoryService } from "../src/services/history-service";
 import { logger } from "../src/logger";
 import * as fsPromises from "node:fs/promises";
@@ -16,6 +16,7 @@ describe("HistoryService", () => {
         readFileSpy = spyOn(fsPromises, "readFile").mockImplementation(() => Promise.resolve("{}"));
         existsSyncSpy = spyOn(fs, "existsSync").mockImplementation(() => true);
         mkdirSyncSpy = spyOn(fs, "mkdirSync").mockImplementation(() => undefined);
+        spyOn(logger, "info").mockImplementation(() => undefined);
         spyOn(logger, "error").mockImplementation(() => undefined);
         spyOn(logger, "debug").mockImplementation(() => undefined);
     });
@@ -35,7 +36,7 @@ describe("HistoryService", () => {
         unit: "u"
     };
 
-    test("loads existing history on init", async () => {
+    test("migrates legacy format and saves versioned payload on init", async () => {
         const now = Date.now();
         const mockHistory = {
             "test-quota": [
@@ -47,9 +48,65 @@ describe("HistoryService", () => {
         const service = new HistoryService("/tmp/history.json");
         await service.init();
 
+        expect((logger.info as any).mock.calls.some((c: any) => c[0] === "history-service:migrated" && c[1] && c[1].to === 1)).toBe(true);
+
+        // flushSave is called during init for legacy data, so writeFile should have been invoked immediately
+        expect(writeFileSpy).toHaveBeenCalled();
+
+        const callArgs = writeFileSpy.mock.calls.find((c: any) => c[0] === "/tmp/history.json");
+        expect(callArgs).toBeTruthy();
+        const savedPayload = JSON.parse(callArgs[1]);
+        expect(savedPayload.version).toBe(1);
+        expect(savedPayload.data["test-quota"]).toHaveLength(1);
+
         const history = service.getHistory("test-quota", 100000);
         expect(history).toHaveLength(1);
         expect(history[0].used).toBe(10);
+    });
+
+    test("logs parse_failed when history is malformed", async () => {
+        readFileSpy.mockResolvedValue("not-json");
+        const service = new HistoryService("/tmp/history.json");
+        await service.init();
+        expect((logger.error as any).mock.calls.some((c: any) => c[0] === "history-service:parse_failed" && c[1] && c[1].path === "/tmp/history.json")).toBe(true);
+        const history = service.getHistory("test-quota", 100000);
+        expect(history).toHaveLength(0);
+    });
+
+    test("loads versioned history format", async () => {
+        const now = Date.now();
+        const mockHistory = {
+            "test-quota": [
+                { timestamp: now, used: 10, limit: 100 }
+            ]
+        };
+        readFileSpy.mockResolvedValue(JSON.stringify({ version: 1, data: mockHistory }));
+
+        const service = new HistoryService("/tmp/history.json");
+        await service.init();
+
+        const history = service.getHistory("test-quota", 100000);
+        expect(history).toHaveLength(1);
+        expect(history[0].used).toBe(10);
+    });
+
+    test("unsupported version logged and data is used", async () => {
+        const now = Date.now();
+        const mockHistory = {
+            "test-quota": [
+                { timestamp: now, used: 20, limit: 100 }
+            ]
+        };
+        readFileSpy.mockResolvedValue(JSON.stringify({ version: 999, data: mockHistory }));
+
+        const service = new HistoryService("/tmp/history.json");
+        await service.init();
+
+        expect((logger.error as any).mock.calls.some((c: any) => c[0] === "history-service:unsupported_version" && c[1] && c[1].version === 999)).toBe(true);
+
+        const history = service.getHistory("test-quota", 100000);
+        expect(history).toHaveLength(1);
+        expect(history[0].used).toBe(20);
     });
 
     test("appends new snapshot and saves after debounce", async () => {
@@ -62,12 +119,9 @@ describe("HistoryService", () => {
         expect(history).toHaveLength(1);
         expect(history[0].used).toBe(50);
         
-        // Should not be called immediately due to debounce
         expect(writeFileSpy).not.toHaveBeenCalled();
 
-        // Wait for debounce (5000ms + buffer)
         await new Promise(resolve => setTimeout(resolve, 5100));
-        
         expect(writeFileSpy).toHaveBeenCalled();
     }, { timeout: 10000 });
 
@@ -75,25 +129,21 @@ describe("HistoryService", () => {
         const now = Date.now();
         const oneHour = 60 * 60 * 1000;
         
-        // Mock existing old data
         const mockHistory = {
             "test-quota": [
-                { timestamp: now - (25 * oneHour), used: 10, limit: 100 }, // 25 hours old (should be pruned)
-                { timestamp: now - (23 * oneHour), used: 20, limit: 100 }  // 23 hours old (should be kept)
+                { timestamp: now - (25 * oneHour), used: 10, limit: 100 },
+                { timestamp: now - (23 * oneHour), used: 20, limit: 100 }
             ]
         };
         readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
 
         const service = new HistoryService("/tmp/history.json");
-        // Default max age is 24h
         await service.init();
         
-        // Append triggers pruning
-        await service.append([mockQuota]); // Current timestamp
+        await service.append([mockQuota]);
 
-        const history = service.getHistory("test-quota", 48 * oneHour); // Get all remaining
+        const history = service.getHistory("test-quota", 48 * oneHour);
         
-        // Should have the 23h old point + the new point
         expect(history).toHaveLength(2);
         expect(history[0].used).toBe(20);
         expect(history[1].used).toBe(50);
@@ -105,7 +155,7 @@ describe("HistoryService", () => {
         
         const mockHistory = {
             "test-quota": [
-                { timestamp: now - (5 * oneHour), used: 10, limit: 100 }, // 5 hours old
+                { timestamp: now - (5 * oneHour), used: 10, limit: 100 },
             ]
         };
         readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
@@ -113,15 +163,12 @@ describe("HistoryService", () => {
         const service = new HistoryService("/tmp/history.json");
         await service.init();
         
-        // Set max age to 2 hours
         service.setMaxAge(2);
 
-        // Append triggers pruning
         await service.append([mockQuota]);
 
         const history = service.getHistory("test-quota", 48 * oneHour);
         
-        // The 5h old point should be gone, only the new one remains
         expect(history).toHaveLength(1);
         expect(history[0].used).toBe(50);
     });
@@ -136,7 +183,7 @@ describe("HistoryService", () => {
                 { timestamp: now - (1 * oneHour), used: 20, limit: 100 }
             ],
             "quota-b": [
-                { timestamp: now - (30 * oneHour), used: 5, limit: 100 } // All old
+                { timestamp: now - (30 * oneHour), used: 5, limit: 100 }
             ]
         };
         readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
@@ -152,9 +199,5 @@ describe("HistoryService", () => {
 
         const historyB = service.getHistory("quota-b", 48 * oneHour);
         expect(historyB).toHaveLength(0);
-        
-        // Ensure empty keys are removed from memory (optional but good for leaks)
-        // Accessing private data for verification is tricky in TS without @ts-ignore or casting
-        // We'll trust getHistory returning empty array implies data is gone or validly filtered.
     });
 });
