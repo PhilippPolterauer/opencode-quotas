@@ -87,6 +87,29 @@ describe("QuotaService - aggregation helpers", () => {
         expect(matchedPro.map(m => m.id)).not.toContain("ag-raw-gemini-1-5-flash");
     });
 
+    describe("Overlapping Patterns", () => {
+        test("should handle model matching multiple patterns by precedence", () => {
+            const quotas: QuotaData[] = [
+                { id: "ag-raw-gemini-1-5-flash", providerName: "Antigravity Gemini 1.5 Flash", used: 10, limit: 100, unit: "u" }
+            ];
+            
+            const config = {
+                aggregatedGroups: [
+                    { id: "ag-flash", name: "Flash Group", patterns: ["flash"], strategy: "most_critical" as const },
+                    { id: "ag-pro", name: "Pro Group", patterns: ["gemini"], strategy: "most_critical" as const }
+                ],
+                showUnaggregated: false
+            };
+            
+            const service = new QuotaService(config);
+            const result = service.processQuotas(quotas);
+            
+            // Should only match one group (the first one), not both
+            expect(result.length).toBe(1);
+            expect(result[0].id).toBe("ag-flash");
+        });
+    });
+
     test("aggregating quotas with default groups assigns each quota to the correct group", () => {
         const { DEFAULT_CONFIG } = require("../../src/defaults");
         const service = new QuotaService({ aggregatedGroups: DEFAULT_CONFIG.aggregatedGroups, showUnaggregated: true });

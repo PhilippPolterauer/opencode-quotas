@@ -1,7 +1,5 @@
-import { type QuotaConfig } from "./interfaces";
-
 // Default configuration for quota rendering and grouping
-export const DEFAULT_CONFIG: QuotaConfig = {
+export const DEFAULT_CONFIG = {
     displayMode: "simple",
     footer: true,
     showFooterTitle: true,

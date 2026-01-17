@@ -150,4 +150,26 @@ describe("Aggregation Strategies", () => {
         expect(processed).toHaveLength(1);
         expect(processed[0].used).toBe(80); // q2 ratio is higher
     });
+
+    describe("Overlapping Patterns", () => {
+        test("should handle model matching multiple patterns by precedence", () => {
+            const quotas: QuotaData[] = [
+                { id: "ag-raw-gemini-1-5-flash", providerName: "Antigravity Gemini 1.5 Flash", used: 10, limit: 100, unit: "u" }
+            ];
+            
+            const service = new QuotaService({
+                aggregatedGroups: [
+                    { id: "ag-flash", name: "Flash Group", patterns: ["flash"], strategy: "most_critical" },
+                    { id: "ag-pro", name: "Pro Group", patterns: ["gemini"], strategy: "most_critical" }
+                ],
+                showUnaggregated: false
+            });
+            
+            const result = service.processQuotas(quotas);
+            
+            // Should only match one group (the first one), not both
+            expect(result.length).toBe(1);
+            expect(result[0].id).toBe("ag-flash");
+        });
+    });
 });
