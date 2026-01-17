@@ -128,7 +128,7 @@ export class QuotaService {
         let results = [...data];
         // 1. Enrich with predictions (before aggregation so sources have it too)
         results = results.map(q => {
-            const time = this.predictionEngine.predictTimeToLimit(q.id, 60);
+            const time = this.predictionEngine.predictTimeToLimit(q.id, this.config.predictionWindowMinutes ?? 60);
             if (time !== Infinity) {
                 return {
                     ...q,

@@ -6,7 +6,7 @@ export const DEFAULT_CONFIG = {
     debug: false,
     enableExperimentalGithub: false,
     progressBar: {
-        color: true,
+        color: false,
         gradients: [
             { threshold: 0.5, color: "green" },
             { threshold: 0.8, color: "yellow" },
@@ -18,6 +18,7 @@ export const DEFAULT_CONFIG = {
     },
     filterByCurrentModel: false,
     showUnaggregated: true,
+    predictionWindowMinutes: 60,
     aggregatedGroups: [
         {
             id: "ag-flash",
