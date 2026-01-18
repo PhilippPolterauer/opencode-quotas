@@ -4,9 +4,9 @@ export const DEFAULT_CONFIG = {
     footer: true,
     showFooterTitle: true,
     debug: false,
-    enableExperimentalGithub: false,
+    enableExperimentalGithub: false, // Set to true to enable experimental GitHub Copilot support
     progressBar: {
-        color: true,
+        color: false,
         gradients: [
             { threshold: 0.5, color: "green" },
             { threshold: 0.8, color: "yellow" },

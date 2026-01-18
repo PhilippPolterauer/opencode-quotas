@@ -7,23 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Integration tests for default configuration behavior to prevent documentation drift (TEST-001)
-
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
 
+## [0.0.2-beta] - 2026-01-17
+
+### Added
+
+- Integration tests for default configuration behavior to prevent documentation drift (TEST-001)
+- Schema validation tests using AJV for configuration validation (TEST-002)
+- Tests for overlapping aggregation patterns (TEST-003)
+- Global `predictionWindowMinutes` config option for prediction engine (FEAT-002)
+- Error handling for malformed history files (ISSUE-016)
+
+### Changed
+
+- Comprehensive test suite expanded from 46 to 175 tests with 383 assertions
+- Updated default `progressBar.color` to `false` (was incorrectly documented as `true`)
+- Clarified experimental GitHub Copilot provider status in documentation (DOC-009)
+
 ### Fixed
 
-- Changed `progressBar.color` default to `true` to match README documentation.
-- Fixed `shouldUseColor` to correctly default to `true` when running in a TTY environment.
 - Correct README to reflect `filterByCurrentModel` default is `false` (DOC-001)
-- Defer quota footer injection until `session.idle` to avoid duplicate footers across multi-step responses.
+- Defer quota footer injection until `session.idle` to avoid duplicate footers across multi-step responses
 - Fix overlapping aggregation patterns where general tokens (e.g. `gemini`) could match multiple groups; make pattern matching token-aware and support regex/glob patterns (BUG-003)
+- Fix `tsconfig.build.json` reference in package.json (BUG-002)
+- Remove unused QuotaTool and stale docs (ISSUE-014)
+- Fix unused imports in logger.ts (ISSUE-013)
+- Fix `test-ag.ts` outdated API signature (ISSUE-012)
+- Add missing `patterns` and `providerId` fields to aggregatedGroups schema (SCHEMA-001)
+- Fix schema mismatch between 'groups' vs 'aggregatedGroups' (ISSUE-015)
+- Fix `showUnaggregated` default causing empty quota display (DOC-002)
+
+### Documentation
+
+- Update DESIGN.md architecture diagram to match implementation (DOC-003)
+- Update AGENTS.md with complete project structure (DOC-005)
 
 ## [0.0.1] - 2026-01-13
 

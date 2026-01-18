@@ -248,7 +248,7 @@ Key configuration options:
 | `displayMode` | enum | `"simple"` | Display mode |
 | `footer` | boolean | `true` | Enable footer injection |
 | `debug` | boolean | `false` | Enable debug logging |
-| `progressBar.color` | boolean | `true` | Enable ANSI colors |
+| `progressBar.color` | boolean | `false` | Enable ANSI colors |
 | `table.columns` | array | auto | Columns to display |
 | `disabled` | array | `[]` | Quota IDs to hide |
 | `aggregatedGroups` | array | preset | Smart aggregation with patterns or explicit sources |
@@ -284,4 +284,4 @@ registry.register(createMyProvider());
 
 ---
 
-_Last Updated: 2026-01-14_
+_Last Updated: 2026-01-17_

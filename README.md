@@ -296,9 +296,11 @@ See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JS
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `footer` | boolean | `true` | Show quotas in chat footer |
+| `showFooterTitle` | boolean | `true` | Show plugin title/header in footer |
 | `filterByCurrentModel` | boolean | `false` | Filter quotas by active model |
 | `disabled` | string[] | `[]` | Quota IDs to hide |
-| `progressBar.color` | boolean | `false` | Enable ANSI colors |
+| `showUnaggregated` | boolean | `true` | Show quotas that don't match any aggregation group |
+| `progressBar.color` | boolean | `false` | Enable ANSI colors (set `true` for colored terminal output) |
 | `progressBar.width` | number | `20` | Progress bar character width |
 | `progressBar.show` | string | `"used"` | `"used"` or `"available"` |
 | `table.columns` | string[] | (auto) | Columns to display |
@@ -307,7 +309,6 @@ See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JS
 | `historyMaxAgeHours` | number | `24` | Max history age in hours |
 | `pollingInterval` | number | `60000` | Refresh interval in ms |
 | `predictionWindowMinutes` | number | `60` | Time window for regression analysis (minutes) |
-| `predictionShortWindowMinutes` | number | `5` | Short time window for spikes (minutes) |
 | `debug` | boolean | `false` | Enable debug logging |
 
 ## Security
