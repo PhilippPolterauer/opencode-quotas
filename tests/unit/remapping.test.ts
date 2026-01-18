@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { QuotaService } from "../src/services/quota-service";
+import { QuotaService } from "../../src/services/quota-service";
 
 describe("Model Filtering with filterByCurrentModel", () => {
     const mockQuotas = [

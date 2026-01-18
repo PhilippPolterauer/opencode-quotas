@@ -1,6 +1,6 @@
 import { expect, test, describe, beforeEach } from "bun:test";
-import { QuotaService } from "../src/services/quota-service";
-import { type QuotaData, type IHistoryService, type HistoryPoint } from "../src/interfaces";
+import { QuotaService } from "../../src/services/quota-service";
+import { type QuotaData, type IHistoryService, type HistoryPoint } from "../../src/interfaces";
 
 describe("Aggregation Strategies", () => {
     let mockHistoryService: IHistoryService;

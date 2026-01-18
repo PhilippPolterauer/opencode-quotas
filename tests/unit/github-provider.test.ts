@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { parseGithubUsage } from "../src/providers/github";
+import { parseGithubUsage } from "../../src/providers/github";
 
 describe("GitHub Copilot Quota Parsing", () => {
   const mockSkuFree = "free_individual_quota";

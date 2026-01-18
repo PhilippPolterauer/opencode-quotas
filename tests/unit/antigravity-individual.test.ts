@@ -1,7 +1,7 @@
 import { expect, test, describe, spyOn, afterEach } from "bun:test";
-import { createAntigravityProvider } from "../src/providers/antigravity";
-import * as auth from "../src/providers/antigravity/auth";
-import * as antigravity from "../src/providers/antigravity";
+import { createAntigravityProvider } from "../../src/providers/antigravity";
+import * as auth from "../../src/providers/antigravity/auth";
+import * as antigravity from "../../src/providers/antigravity";
 
 describe("Antigravity Flat Quota Provider", () => {
     afterEach(() => {

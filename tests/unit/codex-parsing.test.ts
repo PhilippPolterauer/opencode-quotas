@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { extractCodexQuota } from "../src/providers/codex";
+import { extractCodexQuota } from "../../src/providers/codex";
 
 describe("Codex Quota Parsing", () => {
   test("returns multiple entries for primary and secondary windows", () => {

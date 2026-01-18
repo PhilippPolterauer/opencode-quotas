@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { renderQuotaBarParts } from "../src/ui/progress-bar";
+import { renderQuotaBarParts } from "../../src/ui/progress-bar";
 
 describe("Progress Bar Rendering", () => {
   test("renders basic bar at 50%", () => {

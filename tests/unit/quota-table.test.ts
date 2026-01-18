@@ -1,6 +1,6 @@
 import { expect, test, describe } from "bun:test";
-import { renderQuotaTable } from "../src/ui/quota-table";
-import { type QuotaData } from "../src/interfaces";
+import { renderQuotaTable } from "../../src/ui/quota-table";
+import { type QuotaData } from "../../src/interfaces";
 
 describe("Quota Table Rendering", () => {
     test("aligns structured columns", () => {

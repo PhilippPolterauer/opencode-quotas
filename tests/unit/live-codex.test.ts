@@ -1,5 +1,5 @@
 import { expect, test, describe, spyOn, afterEach } from "bun:test";
-import { createCodexProvider } from "../src/providers/codex";
+import { createCodexProvider } from "../../src/providers/codex";
 
 describe("Live Codex Provider (File Reading)", () => {
   afterEach(() => {

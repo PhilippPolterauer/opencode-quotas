@@ -1,5 +1,5 @@
 import { expect, test, describe, beforeEach, afterEach } from "bun:test";
-import { QuotaService } from "../src/services/quota-service";
+import { QuotaService } from "../../src/services/quota-service";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { join } from "node:path";
@@ -93,7 +93,7 @@ describe("QuotaService", () => {
         await service.init(tempDir);
  
         const config = service.getConfig();
-        expect(config.pollingInterval).toBe(require("../src/defaults").DEFAULT_CONFIG.pollingInterval);
+        expect(config.pollingInterval).toBe(require("../../src/defaults").DEFAULT_CONFIG.pollingInterval);
     });
 
     test("does not register GitHub provider by default", async () => {

@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { PluginState } from "../src/plugin-state";
+import { PluginState } from "../../src/plugin-state";
 
 describe("PluginState eviction", () => {
     test("evicts oldest message when exceeding max", () => {
