@@ -18,6 +18,14 @@ export interface PredictionEngineConfig {
 }
 
 /**
+ * The ratio of the total history to use as a fallback for the short-term window 
+ * calculation when the time-based window contains insufficient data.
+ * 15% is chosen to provide a representative sample of recent activity while 
+ * maintaining enough data points for a meaningful linear regression.
+ */
+const SHORT_WINDOW_FALLBACK_RATIO = 0.15;
+
+/**
  * Prediction engine using dual-window linear regression.
  * 
  * This implementation uses two time windows to calculate usage slopes:
@@ -65,15 +73,16 @@ export class LinearRegressionPredictionEngine implements IPredictionEngine {
         // Long Slope
         const mLong = this.calculateSlope(history);
 
-        // Short Slope: most recent data in short window or last 15% of points
+        // Short Slope: most recent data in short window or last fallback ratio of points
         const shortHistory = history.filter(p => p.timestamp > now - shortWindowMs);
         
-        // Ensure we have enough points in short history, or take the last 15%
+        // Ensure we have enough points in short history, or take the fallback ratio
         let effectiveShortHistory = shortHistory;
         if (effectiveShortHistory.length < 2) {
-            const fifteenPercentCount = Math.max(2, Math.ceil(history.length * 0.15));
-            effectiveShortHistory = history.slice(-fifteenPercentCount);
+            const fallbackCount = Math.max(2, Math.ceil(history.length * SHORT_WINDOW_FALLBACK_RATIO));
+            effectiveShortHistory = history.slice(-fallbackCount);
         }
+
 
         const mShort = this.calculateSlope(effectiveShortHistory);
 

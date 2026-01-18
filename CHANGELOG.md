@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Extract magic number 0.15 to `SHORT_WINDOW_FALLBACK_RATIO` in prediction engine for better code clarity.
+
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)
