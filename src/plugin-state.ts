@@ -20,42 +20,41 @@ export class PluginState {
     private processedMessages: string[] = [];
     private processedSet = new Set<string>();
     private locks = new Map<string, Promise<void>>();
-    private pendingBySession = new Map<string, PendingInjection>();
-    private pendingMessages = new Set<string>();
+    private pendingInjections = new Map<string, PendingInjection>();
 
     isProcessed(messageId: string): boolean {
         return this.processedSet.has(messageId);
     }
 
     isPending(messageId: string): boolean {
-        return this.pendingMessages.has(messageId);
+        return this.pendingInjections.has(messageId);
     }
 
     setPending(sessionID: string, messageID: string, partID: string): void {
-        const existing = this.pendingBySession.get(sessionID);
-        if (existing && existing.messageID !== messageID) {
-            this.pendingMessages.delete(existing.messageID);
-        }
-
-        this.pendingBySession.set(sessionID, {
+        this.pendingInjections.set(messageID, {
             sessionID,
             messageID,
             partID,
             createdAt: Date.now(),
         });
-        this.pendingMessages.add(messageID);
     }
 
-    getPending(sessionID: string): PendingInjection | undefined {
-        return this.pendingBySession.get(sessionID);
+    getPendingForSession(sessionID: string): PendingInjection[] {
+        return Array.from(this.pendingInjections.values()).filter(
+            (p) => p.sessionID === sessionID,
+        );
     }
 
-    clearPending(sessionID: string): void {
-        const existing = this.pendingBySession.get(sessionID);
-        if (!existing) return;
-
-        this.pendingMessages.delete(existing.messageID);
-        this.pendingBySession.delete(sessionID);
+    clearPending(sessionID: string, messageID?: string): void {
+        if (messageID) {
+            this.pendingInjections.delete(messageID);
+        } else {
+            for (const [mId, p] of this.pendingInjections.entries()) {
+                if (p.sessionID === sessionID) {
+                    this.pendingInjections.delete(mId);
+                }
+            }
+        }
     }
 
     markProcessed(messageId: string): void {
@@ -63,17 +62,11 @@ export class PluginState {
 
         this.processedSet.add(messageId);
         this.processedMessages.push(messageId);
-        if (this.pendingMessages.has(messageId)) {
-            this.pendingMessages.delete(messageId);
-            for (const [sessionID, pending] of this.pendingBySession) {
-                if (pending.messageID === messageId) {
-                    this.pendingBySession.delete(sessionID);
-                    break;
-                }
-            }
-        }
+        this.pendingInjections.delete(messageId);
 
-        while (this.processedMessages.length > PluginState.MAX_TRACKED_MESSAGES) {
+        while (
+            this.processedMessages.length > PluginState.MAX_TRACKED_MESSAGES
+        ) {
             const oldest = this.processedMessages.shift();
             if (oldest) this.processedSet.delete(oldest);
         }

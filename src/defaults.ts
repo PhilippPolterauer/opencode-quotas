@@ -19,7 +19,7 @@ export const DEFAULT_CONFIG: QuotaConfig = {
         header: true,
     },
     filterByCurrentModel: false,
-    showUnaggregated: true,
+    showUnaggregated: false,
     predictionShortWindowMinutes: 5,
     predictionWindowMinutes: 60,
     aggregatedGroups: [

@@ -7,9 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add an optional end-to-end injection test that runs the OpenCode CLI when `OPENCODE_QUOTAS_E2E=1` is set.
+
 ### Changed
 
 - Extract magic number 0.15 to `SHORT_WINDOW_FALLBACK_RATIO` in prediction engine for better code clarity.
+
+### Fixed
+
+- Fix footer injection patch payload to ensure the text part includes the required discriminator fields (type: "text"), avoiding 400 errors from the API.
+- Ensure ANSI colorization strictly respects `config.color` and is disabled by default, even in TTY environments.
+- Use the build configuration that emits `dist/`, keeping runtime code in sync with source.
 
 ### Planned
 

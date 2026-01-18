@@ -18,6 +18,7 @@ export const DEFAULT_CONFIG = {
     },
     filterByCurrentModel: false,
     showUnaggregated: true,
+    predictionShortWindowMinutes: 5,
     predictionWindowMinutes: 60,
     aggregatedGroups: [
         {

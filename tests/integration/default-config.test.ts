@@ -25,7 +25,7 @@ describe("Default Configuration", () => {
         // Verify defaults match what is currently implemented in src/defaults.ts
         // and check against README expectations.
         expect(config.filterByCurrentModel).toBe(false);
-        expect(config.showUnaggregated).toBe(true);
+        expect(config.showUnaggregated).toBe(false);
         expect(config.footer).toBe(true);
         expect(config.debug).toBe(false);
         expect(config.pollingInterval).toBe(60000);
@@ -81,14 +81,14 @@ describe("Default Configuration", () => {
 
         // ag-raw-flash-1 and ag-raw-flash-2 should be aggregated into ag-flash
         // codex-primary and codex-secondary should be aggregated into codex-smart
-        // unrelated-quota should remain because showUnaggregated is true by default
+        // unrelated-quota should NOT remain because showUnaggregated is false by default
         
         const ids = processed.map(q => q.id);
         expect(ids).toContain("ag-flash");
         expect(ids).toContain("codex-smart");
-        expect(ids).toContain("unrelated-quota");
+        expect(ids).not.toContain("unrelated-quota");
         
-        // Verify no raw source quotas are left (except unrelated-quota)
+        // Verify no raw source quotas are left
         expect(ids).not.toContain("ag-raw-flash-1");
         expect(ids).not.toContain("ag-raw-flash-2");
         expect(ids).not.toContain("codex-primary");

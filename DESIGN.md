@@ -252,8 +252,16 @@ Key configuration options:
 | `table.columns` | array | auto | Columns to display |
 | `disabled` | array | `[]` | Quota IDs to hide |
 | `aggregatedGroups` | array | preset | Smart aggregation with patterns or explicit sources |
+| `showUnaggregated` | boolean | `false` | Show quotas not matched by any group |
 | `historyMaxAgeHours` | number | `24` | History retention |
 | `pollingInterval` | number | `60000` | Cache refresh interval |
+
+### Color Suppression Logic
+
+The plugin implements strict color suppression to ensure clean output in all environments:
+1. **Explicit Config**: `progressBar.color: false` (default) overrides any environment heuristics.
+2. **Environment Overrides**: `NO_COLOR` and `OPENCODE_QUOTAS_NO_COLOR` environment variables explicitly disable color.
+3. **TTY Detection**: Color is disabled if `stdout` is not a TTY, unless `FORCE_COLOR` or `config.color: true` is set.
 
 ---
 
@@ -284,4 +292,4 @@ registry.register(createMyProvider());
 
 ---
 
-_Last Updated: 2026-01-17_
+_Last Updated: 2026-01-18_

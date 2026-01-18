@@ -323,6 +323,7 @@ Built with **Bun** for speed.
 ```bash
 bun install        # Install dependencies
 bun test           # Run tests
+OPENCODE_QUOTAS_E2E=1 bun test tests/integration/injection-e2e.test.ts  # Run E2E injection test
 npm run build      # Build for production
 bun run opencode-quotas  # Run CLI in dev mode
 ```

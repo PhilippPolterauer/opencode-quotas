@@ -14,38 +14,63 @@ export const QuotaHubPlugin = async ({ client, $, directory, serverUrl, }) => {
     const quotaService = new QuotaService();
     let quotaCache;
     let initPromise;
+    const MAX_INIT_RETRIES = 3;
+    const INITIAL_RETRY_DELAY_MS = 2000;
     // Dedicated initialization function
     const ensureInit = async () => {
         if (initPromise)
             return initPromise;
         initPromise = (async () => {
-            try {
-                await historyService.init();
-                await quotaService.init(directory, historyService);
-                const config = quotaService.getConfig();
-                const providers = quotaService.getProviders();
-                logger.debug("init:providers", {
-                    ids: providers.map((p) => p.id),
-                    count: providers.length,
-                });
-                quotaCache = new QuotaCache(providers, {
-                    refreshIntervalMs: config.pollingInterval ?? 60_000,
-                    historyService,
-                    debug: !!config.debug,
-                });
-                quotaCache.start();
-                logger.debug("init:complete");
+            let lastError;
+            for (let attempt = 1; attempt <= MAX_INIT_RETRIES; attempt++) {
+                try {
+                    await historyService.init();
+                    await quotaService.init(directory, historyService);
+                    const config = quotaService.getConfig();
+                    const providers = quotaService.getProviders();
+                    logger.debug("init:providers", {
+                        ids: providers.map((p) => p.id),
+                        count: providers.length,
+                    });
+                    quotaCache = new QuotaCache(providers, {
+                        refreshIntervalMs: config.pollingInterval ?? 60_000,
+                        historyService,
+                        debug: !!config.debug,
+                    });
+                    quotaCache.start();
+                    logger.debug("init:complete");
+                    return; // Success
+                }
+                catch (e) {
+                    lastError = e;
+                    const errorMsg = e instanceof Error ? e.message : String(e);
+                    if (attempt < MAX_INIT_RETRIES) {
+                        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+                        logger.warn("init:failed_retry", {
+                            attempt,
+                            delayMs: delay,
+                            error: errorMsg,
+                        });
+                        await new Promise((resolve) => setTimeout(resolve, delay));
+                    }
+                    else {
+                        logger.error("init:failed_final", {
+                            attempt,
+                            error: errorMsg,
+                        });
+                        // Log a user-visible warning
+                        console.warn(`[QuotaHub] Failed to initialize after ${MAX_INIT_RETRIES} attempts. Quota information will be unavailable. Error: ${errorMsg}`);
+                    }
+                }
             }
-            catch (e) {
-                console.error("Failed to initialize QuotaHubPlugin:", e);
-                // Keep the promise but it failed. Future calls will see it as failed.
-                throw e;
-            }
+            throw lastError;
         })();
         return initPromise;
     };
     // Trigger background initialization
-    ensureInit().catch(() => { });
+    ensureInit().catch(() => {
+        // Warning already logged in ensureInit if it failed after max retries
+    });
     const makeDebugLog = (config) => {
         return (msg, data) => {
             if (config.debug)
@@ -119,7 +144,10 @@ export const QuotaHubPlugin = async ({ client, $, directory, serverUrl, }) => {
         const response = await fetch(url, {
             method: "PATCH",
             headers,
-            body: JSON.stringify({ part }),
+            body: JSON.stringify({
+                ...part,
+                type: "text",
+            }),
         });
         if (!response.ok) {
             const errorText = await response.text().catch(() => "");

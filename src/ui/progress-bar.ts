@@ -34,7 +34,7 @@ function shouldUseColor(config?: ProgressBarConfig): boolean {
   if (process.env.OPENCODE_QUOTAS_NO_COLOR !== undefined) return false;
 
   // Respect explicit config request (useful for tests/environments)
-  if (config?.color === true) return true;
+  if (config?.color !== undefined) return config.color;
 
   // If not a TTY, generally disable color
   if (!process.stdout.isTTY) return false;

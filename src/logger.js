@@ -26,6 +26,9 @@ export class Logger {
     info(msg, data) {
         this.log(msg, data, false);
     }
+    warn(msg, data) {
+        this.log(msg, data, false);
+    }
     error(msg, data) {
         this.log(msg, data, false);
     }

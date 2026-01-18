@@ -36,6 +36,14 @@ type TextPart = {
     type: "text";
     text: string;
     ignored?: boolean;
+    sessionID?: string;
+    messageID?: string;
+    synthetic?: boolean;
+    time?: {
+        start: number;
+        end?: number;
+    };
+    metadata?: Record<string, unknown>;
 };
 
 /**
@@ -208,10 +216,22 @@ export const QuotaHubPlugin: Plugin = async ({
         if (directory) {
             headers["x-opencode-directory"] = directory;
         }
+        const payload: TextPart = {
+            id: part.id || partID,
+            type: "text",
+            text: part.text,
+            ignored: part.ignored,
+            sessionID,
+            messageID,
+            synthetic: part.synthetic,
+            time: part.time,
+            metadata: part.metadata,
+        };
+
         const response = await fetch(url, {
             method: "PATCH",
             headers,
-            body: JSON.stringify({ part }),
+            body: JSON.stringify(payload),
         });
         if (!response.ok) {
             const errorText = await response.text().catch(() => "");
@@ -253,117 +273,102 @@ export const QuotaHubPlugin: Plugin = async ({
                 return;
             }
 
-            const pending = state.getPending(sessionID);
-            if (!pending) {
+            const pendingList = state.getPendingForSession(sessionID);
+            if (pendingList.length === 0) {
                 debugLog("idle:no_pending", { sessionID });
                 return;
             }
 
-            if (state.isProcessed(pending.messageID)) {
-                debugLog("idle:already_processed", {
-                    messageID: pending.messageID,
-                });
-                state.clearPending(sessionID);
-                return;
-            }
-
-            const release = await state.acquireLock(pending.messageID);
-            debugLog("lock:acquired_idle", {
-                messageID: pending.messageID,
-            });
-
-            try {
+            for (const pending of pendingList) {
                 if (state.isProcessed(pending.messageID)) {
-                    debugLog("idle:already_processed_after_lock", {
-                        messageID: pending.messageID,
-                    });
-                    state.clearPending(sessionID);
-                    return;
+                    state.clearPending(sessionID, pending.messageID);
+                    continue;
                 }
 
-                const { data: messages } = await client.session.messages({
-                    path: { id: sessionID },
-                    query: { limit: 1 },
-                });
-
-                const latest = messages?.[0];
-                if (!latest) {
-                    debugLog("idle:no_latest_message", { sessionID });
-                    state.clearPending(sessionID);
-                    return;
-                }
-
-                if (latest.info.role !== "assistant") {
-                    debugLog("idle:latest_not_assistant", {
-                        sessionID,
-                        role: latest.info.role,
-                    });
-                    state.clearPending(sessionID);
-                    return;
-                }
-
-                if (latest.info.id !== pending.messageID) {
-                    debugLog("idle:pending_stale", {
-                        sessionID,
-                        pendingMessageID: pending.messageID,
-                        latestMessageID: latest.info.id,
-                    });
-                    state.clearPending(sessionID);
-                    return;
-                }
-
-                const assistantMsg = latest.info as ExtendedAssistantMessage;
-                const textPart = findLatestTextPart(latest.parts);
-                if (!textPart) {
-                    debugLog("idle:no_text_part", {
-                        messageID: latest.info.id,
-                    });
-                    state.clearPending(sessionID);
-                    return;
-                }
-
-                if (textPart.text.includes(PLUGIN_FOOTER_SIGNATURE)) {
-                    debugLog(SKIP_REASONS.FOOTER_PRESENT, {
-                        messageID: latest.info.id,
-                    });
-                    state.markProcessed(pending.messageID);
-                    state.clearPending(sessionID);
-                    return;
-                }
-
-                const footer = buildFooterText(
-                    assistantMsg,
-                    config,
-                    cache,
-                    debugLog,
-                );
-                if (!footer) {
-                    state.clearPending(sessionID);
-                    return;
-                }
-
-                await updateTextPart(sessionID, latest.info.id, textPart.id, {
-                    ...textPart,
-                    text: textPart.text + footer.text,
-                });
-
-                state.markProcessed(pending.messageID);
-                state.clearPending(sessionID);
-                debugLog("inject:footer", {
-                    messageID: latest.info.id,
-                    lines: footer.lineCount,
-                    source: "session.idle",
-                });
-            } catch (e) {
-                logger.error("idle:inject_failed", {
-                    sessionID,
-                    error: e,
-                });
-            } finally {
-                debugLog("lock:release_idle", {
+                const release = await state.acquireLock(pending.messageID);
+                debugLog("lock:acquired_idle", {
                     messageID: pending.messageID,
                 });
-                release();
+
+                try {
+                    if (state.isProcessed(pending.messageID)) {
+                        state.clearPending(sessionID, pending.messageID);
+                        continue;
+                    }
+
+                    // Fetch the specific message by ID
+                    const { data: result } = await client.session.message({
+                        path: {
+                            id: sessionID,
+                            messageID: pending.messageID,
+                        },
+                    });
+
+                    if (!result || result.info.role !== "assistant") {
+                        debugLog("idle:skip_not_assistant", {
+                            messageID: pending.messageID,
+                            role: result?.info?.role,
+                        });
+                        state.markProcessed(pending.messageID);
+                        continue;
+                    }
+
+                    const assistantMsg = result.info as ExtendedAssistantMessage;
+                    const textPart = (result.parts as TextPart[]).find(
+                        (p) => p.id === pending.partID,
+                    ) || findLatestTextPart(result.parts);
+
+                    if (!textPart) {
+                        debugLog("idle:no_text_part", {
+                            messageID: pending.messageID,
+                        });
+                        state.markProcessed(pending.messageID);
+                        continue;
+                    }
+
+                    if (textPart.text.includes(PLUGIN_FOOTER_SIGNATURE)) {
+                        debugLog(SKIP_REASONS.FOOTER_PRESENT, {
+                            messageID: pending.messageID,
+                        });
+                        state.markProcessed(pending.messageID);
+                        continue;
+                    }
+
+                    const footer = buildFooterText(
+                        assistantMsg,
+                        config,
+                        cache,
+                        debugLog,
+                    );
+                    if (!footer) {
+                        state.markProcessed(pending.messageID);
+                        continue;
+                    }
+
+                    await updateTextPart(
+                        sessionID,
+                        pending.messageID,
+                        textPart.id,
+                        {
+                            ...textPart,
+                            text: textPart.text + footer.text,
+                        },
+                    );
+
+                    state.markProcessed(pending.messageID);
+                    debugLog("inject:footer_idle", {
+                        messageID: pending.messageID,
+                        lines: footer.lineCount,
+                    });
+                } catch (e) {
+                    logger.error("idle:inject_failed", {
+                        sessionID,
+                        messageID: pending.messageID,
+                        error: e,
+                    });
+                } finally {
+                    release();
+                }
             }
         },
         /**
@@ -574,13 +579,44 @@ export const QuotaHubPlugin: Plugin = async ({
                     return;
                 }
 
-                state.setPending(input.sessionID, input.messageID, input.partID);
-                debugLog("pending:queued", {
-                    messageID: input.messageID,
-                    partID: input.partID,
-                    sessionID: input.sessionID,
-                    lines: footer.lineCount,
-                });
+                // Attempt immediate injection
+                const textPart = (result.parts as TextPart[]).find(
+                    (p) => p.id === input.partID,
+                );
+
+                if (textPart && textPart.type === "text") {
+                    debugLog("inject:footer_immediate_start", {
+                        messageID: input.messageID,
+                        partID: input.partID,
+                    });
+
+                    await updateTextPart(
+                        input.sessionID,
+                        input.messageID,
+                        input.partID,
+                        {
+                            ...textPart,
+                            text: textPart.text + footer.text,
+                        },
+                    );
+
+                    state.markProcessed(input.messageID);
+                    debugLog("inject:footer_immediate_success", {
+                        messageID: input.messageID,
+                        lines: footer.lineCount,
+                    });
+                } else {
+                    state.setPending(
+                        input.sessionID,
+                        input.messageID,
+                        input.partID,
+                    );
+                    debugLog("pending:queued_fallback", {
+                        messageID: input.messageID,
+                        partID: input.partID,
+                        sessionID: input.sessionID,
+                    });
+                }
             } finally {
                 debugLog("lock:release", { messageID: input.messageID });
                 release();
