@@ -309,6 +309,7 @@ See [schemas/quotas.schema.json](schemas/quotas.schema.json) for the complete JS
 | `historyMaxAgeHours` | number | `24` | Max history age in hours |
 | `pollingInterval` | number | `60000` | Refresh interval in ms |
 | `predictionWindowMinutes` | number | `60` | Time window for regression analysis (minutes) |
+| `predictionShortWindowMinutes` | number | `5` | Short time window for spike detection (minutes) |
 | `debug` | boolean | `false` | Enable debug logging |
 
 ## Security
