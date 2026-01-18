@@ -85,6 +85,23 @@ describe("LinearRegressionPredictionEngine", () => {
             expect(engine.predictTimeToLimit("q1")).toBe(Infinity);
         });
 
+        test("returns Infinity when limit is zero or negative (treated as unlimited)", () => {
+            const now = Date.now();
+            const engine = new LinearRegressionPredictionEngine(mockHistoryService);
+            
+            historyData["q0"] = [
+                { timestamp: now - 1000, used: 50, limit: 0 },
+                { timestamp: now, used: 60, limit: 0 }
+            ];
+            expect(engine.predictTimeToLimit("q0")).toBe(Infinity);
+
+            historyData["q-1"] = [
+                { timestamp: now - 1000, used: 50, limit: -1 },
+                { timestamp: now, used: 60, limit: -1 }
+            ];
+            expect(engine.predictTimeToLimit("q-1")).toBe(Infinity);
+        });
+
         test("predicts time correctly for steady usage", () => {
             const now = Date.now();
             // 10 units per minute steady usage

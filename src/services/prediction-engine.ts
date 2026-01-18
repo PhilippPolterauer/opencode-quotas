@@ -81,7 +81,7 @@ export class LinearRegressionPredictionEngine implements IPredictionEngine {
         const m = Math.max(mLong, mShort);
         
         if (m <= 0) return Infinity;
-        if (lastPoint.limit === null) return Infinity;
+        if (lastPoint.limit === null || lastPoint.limit <= 0) return Infinity;
 
         const remaining = lastPoint.limit - lastPoint.used;
         if (remaining <= 0) return 0;

@@ -67,8 +67,8 @@ export class AggregationService implements IAggregationService {
      */
     aggregateMax(quotas: QuotaData[]): QuotaData {
         return quotas.reduce((a, b) => {
-            const aRatio = a.limit ? a.used / a.limit : 0;
-            const bRatio = b.limit ? b.used / b.limit : 0;
+            const aRatio = a.limit !== null && a.limit > 0 ? a.used / a.limit : 0;
+            const bRatio = b.limit !== null && b.limit > 0 ? b.used / b.limit : 0;
             return aRatio > bRatio ? a : b;
         });
     }
@@ -78,8 +78,8 @@ export class AggregationService implements IAggregationService {
      */
     aggregateMin(quotas: QuotaData[]): QuotaData {
         return quotas.reduce((a, b) => {
-            const aRatio = a.limit ? a.used / a.limit : 0;
-            const bRatio = b.limit ? b.used / b.limit : 0;
+            const aRatio = a.limit !== null && a.limit > 0 ? a.used / a.limit : 0;
+            const bRatio = b.limit !== null && b.limit > 0 ? b.used / b.limit : 0;
             return aRatio < bRatio ? a : b;
         });
     }
@@ -94,7 +94,7 @@ export class AggregationService implements IAggregationService {
         id: string, 
         strategy: "mean" | "median"
     ): QuotaData {
-        const ratios = quotas.map(q => q.limit ? q.used / q.limit : 0);
+        const ratios = quotas.map(q => q.limit !== null && q.limit > 0 ? q.used / q.limit : 0);
         let avgRatio = 0;
 
         if (strategy === "mean") {

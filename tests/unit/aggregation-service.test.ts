@@ -29,6 +29,18 @@ describe("AggregationService", () => {
             expect(result.id).toBe("q2");
         });
 
+        test("handles quotas with zero or negative limits (treated as unlimited)", () => {
+            const service = new AggregationService(new NullPredictionEngine());
+            const quotas: QuotaData[] = [
+                { id: "q1", providerName: "P1", used: 100, limit: 0, unit: "u" },
+                { id: "q2", providerName: "P2", used: 100, limit: -1, unit: "u" },
+                { id: "q3", providerName: "P3", used: 10, limit: 100, unit: "u" },
+            ];
+            const result = service.aggregateMax(quotas);
+            // q1 and q2 have ratio 0, q3 has 0.1
+            expect(result.id).toBe("q3");
+        });
+
         test("returns last when all ratios equal (reduce behavior)", () => {
             const service = new AggregationService(new NullPredictionEngine());
             const equalQuotas: QuotaData[] = [
