@@ -10,7 +10,6 @@ export class PluginState {
     locks = new Map();
     pendingBySession = new Map();
     pendingMessages = new Set();
-    recentChecks = new Map();
     isProcessed(messageId) {
         return this.processedSet.has(messageId);
     }

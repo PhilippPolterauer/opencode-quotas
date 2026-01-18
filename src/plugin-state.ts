@@ -22,7 +22,6 @@ export class PluginState {
     private locks = new Map<string, Promise<void>>();
     private pendingBySession = new Map<string, PendingInjection>();
     private pendingMessages = new Set<string>();
-    private recentChecks = new Map<string, number>();
 
     isProcessed(messageId: string): boolean {
         return this.processedSet.has(messageId);

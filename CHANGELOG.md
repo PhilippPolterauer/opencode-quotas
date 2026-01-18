@@ -52,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update DESIGN.md architecture diagram to match implementation (DOC-003)
 - Update AGENTS.md with complete project structure (DOC-005)
 
+### Removed
+
+- Removed unused `recentChecks` field in `PluginState`.
+
 ## [0.0.1] - 2026-01-13
 
 ### Added
