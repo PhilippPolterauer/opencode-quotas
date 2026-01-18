@@ -25,23 +25,23 @@ export class Logger {
         this.debugEnabled = enabled;
     }
 
-    public debug(msg: string, data?: any): void {
+    public debug(msg: string, data?: unknown): void {
         this.log(msg, data, true);
     }
 
-    public info(msg: string, data?: any): void {
+    public info(msg: string, data?: unknown): void {
         this.log(msg, data, false);
     }
 
-    public warn(msg: string, data?: any): void {
+    public warn(msg: string, data?: unknown): void {
         this.log(msg, data, false);
     }
 
-    public error(msg: string, data?: any): void {
+    public error(msg: string, data?: unknown): void {
         this.log(msg, data, false);
     }
 
-    private log(msg: string, data: any, requiresDebug: boolean): void {
+    private log(msg: string, data: unknown, requiresDebug: boolean): void {
         if (requiresDebug && !this.debugEnabled) return;
 
         const timestamp = new Date().toISOString();
