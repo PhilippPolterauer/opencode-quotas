@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Added missing `predictionShortWindowMinutes` default to `DEFAULT_CONFIG` in `src/defaults.ts`.
 - Correct README to reflect `filterByCurrentModel` default is `false` (DOC-001)
 - Defer quota footer injection until `session.idle` to avoid duplicate footers across multi-step responses
 - Fix overlapping aggregation patterns where general tokens (e.g. `gemini`) could match multiple groups; make pattern matching token-aware and support regex/glob patterns (BUG-003)

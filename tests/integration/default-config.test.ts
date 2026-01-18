@@ -35,6 +35,7 @@ describe("Default Configuration", () => {
         
         // Match new predictionWindowMinutes default
         expect(config.predictionWindowMinutes).toBe(60);
+        expect(config.predictionShortWindowMinutes).toBe(5);
         
         // Table defaults
         expect(config.table?.header).toBe(true);

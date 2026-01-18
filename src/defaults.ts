@@ -20,6 +20,7 @@ export const DEFAULT_CONFIG: QuotaConfig = {
     },
     filterByCurrentModel: false,
     showUnaggregated: true,
+    predictionShortWindowMinutes: 5,
     predictionWindowMinutes: 60,
     aggregatedGroups: [
         {
