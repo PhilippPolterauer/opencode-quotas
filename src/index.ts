@@ -54,40 +54,68 @@ export const QuotaHubPlugin: Plugin = async ({
     let quotaCache: QuotaCache | undefined;
     let initPromise: Promise<void> | undefined;
 
+    const MAX_INIT_RETRIES = 3;
+    const INITIAL_RETRY_DELAY_MS = 2000;
+
     // Dedicated initialization function
     const ensureInit = async (): Promise<void> => {
         if (initPromise) return initPromise;
 
         initPromise = (async () => {
-            try {
-                await historyService.init();
-                await quotaService.init(directory, historyService);
+            let lastError: any;
+            for (let attempt = 1; attempt <= MAX_INIT_RETRIES; attempt++) {
+                try {
+                    await historyService.init();
+                    await quotaService.init(directory, historyService);
 
-                const config = quotaService.getConfig();
-                const providers = quotaService.getProviders();
-                logger.debug("init:providers", {
-                    ids: providers.map((p) => p.id),
-                    count: providers.length,
-                });
-                quotaCache = new QuotaCache(providers, {
-                    refreshIntervalMs: config.pollingInterval ?? 60_000,
-                    historyService,
-                    debug: !!config.debug,
-                });
-                quotaCache.start();
-                logger.debug("init:complete");
-            } catch (e) {
-                console.error("Failed to initialize QuotaHubPlugin:", e);
-                // Keep the promise but it failed. Future calls will see it as failed.
-                throw e;
+                    const config = quotaService.getConfig();
+                    const providers = quotaService.getProviders();
+                    logger.debug("init:providers", {
+                        ids: providers.map((p) => p.id),
+                        count: providers.length,
+                    });
+                    quotaCache = new QuotaCache(providers, {
+                        refreshIntervalMs: config.pollingInterval ?? 60_000,
+                        historyService,
+                        debug: !!config.debug,
+                    });
+                    quotaCache.start();
+                    logger.debug("init:complete");
+                    return; // Success
+                } catch (e) {
+                    lastError = e;
+                    const errorMsg = e instanceof Error ? e.message : String(e);
+
+                    if (attempt < MAX_INIT_RETRIES) {
+                        const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+                        logger.warn("init:failed_retry", {
+                            attempt,
+                            delayMs: delay,
+                            error: errorMsg,
+                        });
+                        await new Promise((resolve) => setTimeout(resolve, delay));
+                    } else {
+                        logger.error("init:failed_final", {
+                            attempt,
+                            error: errorMsg,
+                        });
+                        // Log a user-visible warning
+                        console.warn(
+                            `[QuotaHub] Failed to initialize after ${MAX_INIT_RETRIES} attempts. Quota information will be unavailable. Error: ${errorMsg}`,
+                        );
+                    }
+                }
             }
+            throw lastError;
         })();
 
         return initPromise;
     };
 
     // Trigger background initialization
-    ensureInit().catch(() => {});
+    ensureInit().catch(() => {
+        // Warning already logged in ensureInit if it failed after max retries
+    });
 
     const makeDebugLog = (config: ReturnType<typeof quotaService.getConfig>) => {
         return (msg: string, data?: any) => {

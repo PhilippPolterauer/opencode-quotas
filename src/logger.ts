@@ -33,6 +33,10 @@ export class Logger {
         this.log(msg, data, false);
     }
 
+    public warn(msg: string, data?: any): void {
+        this.log(msg, data, false);
+    }
+
     public error(msg: string, data?: any): void {
         this.log(msg, data, false);
     }

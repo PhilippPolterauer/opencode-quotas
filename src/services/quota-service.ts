@@ -38,29 +38,34 @@ export class QuotaService {
         if (this.initPromise) return this.initPromise;
 
         this.initPromise = (async () => {
-            this.historyService = historyService;
+            try {
+                this.historyService = historyService;
 
-            // Load config from disk
-            this.config = await ConfigLoader.loadFromDisk(directory, this.config);
+                // Load config from disk
+                this.config = await ConfigLoader.loadFromDisk(directory, this.config);
 
-            if (this.historyService && this.config.historyMaxAgeHours !== undefined) {
-                this.historyService.setMaxAge(this.config.historyMaxAgeHours);
+                if (this.historyService && this.config.historyMaxAgeHours !== undefined) {
+                    this.historyService.setMaxAge(this.config.historyMaxAgeHours);
+                }
+
+                // Initialize prediction engine with history service
+                if (this.historyService) {
+                    this.predictionEngine = new LinearRegressionPredictionEngine(
+                        this.historyService,
+                        { predictionShortWindowMinutes: this.config.predictionShortWindowMinutes }
+                    );
+                }
+                // Re-initialize aggregation service with the new prediction engine
+                this.aggregationService = new AggregationService(this.predictionEngine);
+
+                // Register providers
+                await this.registerProviders();
+
+                this.initialized = true;
+            } catch (e) {
+                this.initPromise = null;
+                throw e;
             }
-
-            // Initialize prediction engine with history service
-            if (this.historyService) {
-                this.predictionEngine = new LinearRegressionPredictionEngine(
-                    this.historyService,
-                    { predictionShortWindowMinutes: this.config.predictionShortWindowMinutes }
-                );
-            }
-            // Re-initialize aggregation service with the new prediction engine
-            this.aggregationService = new AggregationService(this.predictionEngine);
-
-            // Register providers
-            await this.registerProviders();
-
-            this.initialized = true;
         })();
         
         return this.initPromise;
