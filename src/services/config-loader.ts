@@ -111,7 +111,7 @@ export class ConfigLoader {
         }
 
         // Validate and normalize config values
-        await ConfigLoader.validateConfig(result);
+        ConfigLoader.validateConfig(result);
         
         return result;
     }
@@ -149,10 +149,17 @@ export class ConfigLoader {
             target.showUnaggregated = userConfig.showUnaggregated;
         }
         if (userConfig.aggregatedGroups) {
-            target.aggregatedGroups = userConfig.aggregatedGroups.map(g => ({ ...g }));
+            target.aggregatedGroups = userConfig.aggregatedGroups.map(g => ({ 
+                ...g,
+                sources: g.sources ? [...g.sources] : undefined,
+                patterns: g.patterns ? [...g.patterns] : undefined
+            }));
         }
         if (userConfig.historyMaxAgeHours !== undefined) {
             target.historyMaxAgeHours = userConfig.historyMaxAgeHours;
+        }
+        if (userConfig.historyResetThreshold !== undefined) {
+            target.historyResetThreshold = userConfig.historyResetThreshold;
         }
         if (userConfig.predictionShortWindowMinutes !== undefined) {
             target.predictionShortWindowMinutes = userConfig.predictionShortWindowMinutes;
@@ -165,7 +172,7 @@ export class ConfigLoader {
     /**
      * Validates and normalizes configuration values.
      */
-    private static async validateConfig(config: QuotaConfig): Promise<void> {
+    private static validateConfig(config: QuotaConfig): void {
         // Handle pollingInterval from user config
         const validated = validatePollingInterval(config.pollingInterval as unknown);
         if (validated === null) {

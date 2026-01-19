@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.2] - 2026-01-19
 
+### rc2 Improvements
+
+- **Configurable Reset Threshold**: Added `historyResetThreshold` option (0-100) to `QuotaConfig` to allow fine-tuning of quota reset detection in `HistoryService`.
+- **Improved Pattern Matching**: Relaxed token splitting in `QuotaService` to better handle common ID characters like hyphens and underscores.
+- **Consistent Defaults**: Aligned `showUnaggregated` default to `false` across implementation, interface documentation, and JSON schema.
+- **ConfigLoader Refinement**: 
+    - Switched `validateConfig` to a synchronous implementation for better predictability during initialization.
+    - Enhanced deep cloning of `aggregatedGroups` to prevent shared array references between default and user configurations.
+- **Type Safety**: Improved type safety in plugin initialization by replacing `any` with `unknown` for error handling.
+- **Test Suite Enhancements**: Updated all unit test mocks to support the new `IHistoryService` interface, ensuring 100% test pass rate.
+
 ### Added
 
 - End-to-end injection test that runs the OpenCode CLI when `OPENCODE_QUOTAS_E2E=1` is set

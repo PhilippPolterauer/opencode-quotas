@@ -101,9 +101,14 @@ export interface QuotaConfig {
     predictionWindowMinutes?: number;
     /**
      * Whether to show quotas that did not match any aggregation group.
-     * Defaults to true.
+     * Defaults to false.
      */
     showUnaggregated?: boolean;
+    /**
+     * Threshold for detecting a quota reset (0-100).
+     * Defaults to 20.
+     */
+    historyResetThreshold?: number;
 }
 
 export type AggregationStrategy =
@@ -163,6 +168,7 @@ export interface IHistoryService {
     append(snapshot: QuotaData[]): Promise<void>;
     getHistory(quotaId: string, windowMs: number): HistoryPoint[];
     setMaxAge(hours: number): void;
+    setResetThreshold(percent: number): void;
     pruneAll(): Promise<void>;
 }
 

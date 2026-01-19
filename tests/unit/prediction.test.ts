@@ -16,6 +16,7 @@ describe("ETTL Prediction (Unit)", () => {
                 return (historyData[id] || []).filter(p => p.timestamp > now - windowMs);
             },
             setMaxAge: () => {},
+            setResetThreshold: () => {},
             pruneAll: async () => {}
         };
     });

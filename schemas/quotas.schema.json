@@ -214,8 +214,15 @@
         },
         "showUnaggregated": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Whether to show quotas that did not match any aggregation group."
+        },
+        "historyResetThreshold": {
+            "type": "number",
+            "default": 20,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Threshold for detecting a quota reset (0-100)."
         }
     }
 }

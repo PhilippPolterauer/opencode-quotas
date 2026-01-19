@@ -48,6 +48,10 @@ export class QuotaService {
                     this.historyService.setMaxAge(this.config.historyMaxAgeHours);
                 }
 
+                if (this.historyService && this.config.historyResetThreshold !== undefined) {
+                    this.historyService.setResetThreshold(this.config.historyResetThreshold);
+                }
+
                 // Initialize prediction engine with history service
                 if (this.historyService) {
                     this.predictionEngine = new LinearRegressionPredictionEngine(
@@ -311,7 +315,7 @@ export class QuotaService {
                 }
             }
 
-            const tokens = lowerTarget.split(/[^a-z0-9]+/).filter(Boolean);
+            const tokens = lowerTarget.split(/[^a-z0-9\-_]+/).filter(Boolean);
             for (let i = 0; i < tokens.length; i++) {
                 if (tokens[i] === lowerPattern) {
                     return { matched: true, matchType: "token", tokenIndex: i, tokensCount: tokens.length };

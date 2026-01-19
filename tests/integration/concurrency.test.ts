@@ -19,9 +19,11 @@ describe("Concurrency Integration", () => {
                             info: {
                                 role: "assistant",
                                 mode: "normal",
+                                finish: "stop",
                                 providerID: "test-provider",
                                 modelID: "test-model"
-                            }
+                            },
+                            parts: []
                         }
                     };
                 }

@@ -16,6 +16,7 @@ describe("ETTL Dual-Window & Aggregation Precedence", () => {
                 return (historyData[id] || []).filter(p => p.timestamp > now - windowMs);
             },
             setMaxAge: () => {},
+            setResetThreshold: () => {},
             pruneAll: async () => {}
         };
     });

@@ -71,7 +71,7 @@ export const QuotaHubPlugin: Plugin = async ({
         if (initPromise) return initPromise;
 
         initPromise = (async () => {
-            let lastError: any;
+            let lastError: unknown;
             for (let attempt = 1; attempt <= MAX_INIT_RETRIES; attempt++) {
                 try {
                     await historyService.init();
@@ -291,7 +291,7 @@ export const QuotaHubPlugin: Plugin = async ({
                     return;
                 }
 
-                // Fetch message to check role
+                // Fetch message to verify role and parts
                 const { data: result } = await client.session.message({
                     path: {
                         id: input.sessionID,
@@ -309,25 +309,25 @@ export const QuotaHubPlugin: Plugin = async ({
                 }
 
                 const assistantMsg = result.info as ExtendedAssistantMessage;
+                const parts = result.parts || [];
+                const currentPartIndex = parts.findIndex((p) => p.id === input.partID);
+                const currentPart = parts[currentPartIndex] as { type?: string } | undefined;
+                
+                // Simplified completion check: Is this the last part of the message?
+                const isLastPart = currentPartIndex === parts.length - 1;
 
-                // Log message details
                 debugLog("message:details", {
                     id: input.messageID,
                     mode: assistantMsg.mode,
                     agent: assistantMsg.agent,
-                    finish: assistantMsg.finish,
-                    tokens: assistantMsg.tokens,
-                    type: assistantMsg.type,
-                    modelID: assistantMsg.modelID,
-                    providerID: assistantMsg.providerID,
+                    partID: input.partID,
+                    partType: currentPart?.type,
+                    isLastPart,
+                    totalParts: parts.length
                 });
 
                 const isSubagentMessage = assistantMsg.mode === "subagent";
-                const currentPart = result.parts?.find(
-                    (p) => p.id === input.partID,
-                );
-                const isReasoningPart =
-                    (currentPart as { type?: string })?.type === "reasoning";
+                const isReasoningPart = currentPart?.type === "reasoning";
                 const hasReasoningType =
                     assistantMsg.mode === "reasoning" ||
                     assistantMsg.type === "reasoning";
@@ -335,37 +335,35 @@ export const QuotaHubPlugin: Plugin = async ({
                 const isThinking =
                     isSubagentMessage || isReasoningPart || hasReasoningType;
 
-                // Only inject when message is fully complete (finish === "stop")
-                // This ensures we only inject once at the very end of the assistant response
-                const isComplete = assistantMsg.finish === "stop";
-                const isCancelledOrError =
-                    assistantMsg.finish !== undefined &&
-                    assistantMsg.finish !== "stop";
-
                 if (isThinking) {
                     debugLog(SKIP_REASONS.THINKING, {
                         messageID: input.messageID,
-                        mode: assistantMsg.mode,
-                        type: assistantMsg.type,
-                        isReasoningPart,
+                        partID: input.partID,
+                        type: currentPart?.type
                     });
                     return;
                 }
 
-                if (isCancelledOrError) {
-                    debugLog(SKIP_REASONS.STOPPED, {
+                // Only inject on the last part of the message to avoid double injection
+                // and to ensure we are at the very end.
+                if (!isLastPart) {
+                    debugLog("skip:not_last_part", {
                         messageID: input.messageID,
-                        finish: assistantMsg.finish,
+                        partID: input.partID,
+                        index: currentPartIndex,
+                        total: parts.length
                     });
                     return;
                 }
 
-                // Skip if message is still streaming (not yet complete)
-                if (!isComplete) {
-                    debugLog(SKIP_REASONS.NOT_COMPLETE, {
+                // Verify it's a text part (we don't want to inject into tool calls or others)
+                if (currentPart?.type !== "text") {
+                    debugLog("skip:not_text_part", {
                         messageID: input.messageID,
-                        finish: assistantMsg.finish,
+                        partID: input.partID,
+                        type: currentPart?.type
                     });
+                    state.markProcessed(input.messageID);
                     return;
                 }
 

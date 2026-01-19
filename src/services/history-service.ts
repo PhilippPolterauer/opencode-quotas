@@ -21,6 +21,7 @@ export class HistoryService implements IHistoryService {
     private historyPath: string;
     private data: Record<string, HistoryPoint[]> = {};
     private maxWindowMs: number = 24 * 60 * 60 * 1000; // Keep 24 hours of history
+    private resetThresholdPercent: number = HistoryService.RESET_THRESHOLD_PERCENT;
     private saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(customPath?: string) {
@@ -152,7 +153,7 @@ export class HistoryService implements IHistoryService {
         }
 
         // Calculate threshold based on the limit
-        const threshold = (HistoryService.RESET_THRESHOLD_PERCENT / 100) * currentQuota.limit;
+        const threshold = (this.resetThresholdPercent / 100) * currentQuota.limit;
 
         // Detect reset if the drop exceeds the threshold
         return usageDrop >= threshold;
@@ -167,6 +168,10 @@ export class HistoryService implements IHistoryService {
 
     setMaxAge(hours: number): void {
         this.maxWindowMs = hours * 60 * 60 * 1000;
+    }
+
+    setResetThreshold(percent: number): void {
+        this.resetThresholdPercent = percent;
     }
 
     async pruneAll(): Promise<void> {

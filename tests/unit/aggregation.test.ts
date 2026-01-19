@@ -13,6 +13,7 @@ describe("Aggregation Strategies", () => {
             append: async () => {},
             getHistory: (id: string) => historyData[id] || [],
             setMaxAge: () => {},
+            setResetThreshold: () => {},
             pruneAll: async () => {}
         };
     });
