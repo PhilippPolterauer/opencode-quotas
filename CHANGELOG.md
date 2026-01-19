@@ -7,64 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Add an optional end-to-end injection test that runs the OpenCode CLI when `OPENCODE_QUOTAS_E2E=1` is set.
-
-### Changed
-
-- Extract magic number 0.15 to `SHORT_WINDOW_FALLBACK_RATIO` in prediction engine for better code clarity.
-
-### Fixed
-
-- Fix footer injection patch payload to ensure the text part includes the required discriminator fields (type: "text"), avoiding 400 errors from the API.
-- Ensure ANSI colorization strictly respects `config.color` and is disabled by default, even in TTY environments.
-- Use the build configuration that emits `dist/`, keeping runtime code in sync with source.
-
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
 
-## [0.0.2-beta] - 2026-01-17
+## [0.0.2] - 2026-01-19
 
 ### Added
 
-- Integration tests for default configuration behavior to prevent documentation drift (TEST-001)
-- Schema validation tests using AJV for configuration validation (TEST-002)
-- Tests for overlapping aggregation patterns (TEST-003)
-- Global `predictionWindowMinutes` config option for prediction engine (FEAT-002)
-- Error handling for malformed history files (ISSUE-016)
+- End-to-end injection test that runs the OpenCode CLI when `OPENCODE_QUOTAS_E2E=1` is set
+- Integration tests for default configuration behavior to prevent documentation drift
+- Schema validation tests using AJV for configuration validation
+- Tests for overlapping aggregation patterns
+- Global `predictionWindowMinutes` config option for prediction engine
+- Error handling for malformed history files
 
 ### Changed
 
+- **Inline footer injection**: Switch from idle-based PATCH injection to inline injection via `experimental.text.complete`, modifying `output.text` directly for immediate, reliable footer display
+- Filter out internal/test Antigravity quotas (e.g. "chat 12345", "rev123") by default to reduce noise
+- Extract `SHORT_WINDOW_FALLBACK_RATIO` constant in prediction engine for better code clarity
 - Comprehensive test suite expanded from 46 to 175 tests with 383 assertions
 - Updated default `progressBar.color` to `false` (was incorrectly documented as `true`)
-- Clarified experimental GitHub Copilot provider status in documentation (DOC-009)
+- Clarified experimental GitHub Copilot provider status in documentation
 
 ### Fixed
 
-- Added missing `predictionShortWindowMinutes` default to `DEFAULT_CONFIG` in `src/defaults.ts`.
-- Correct README to reflect `filterByCurrentModel` default is `false` (DOC-001)
-- Defer quota footer injection until `session.idle` to avoid duplicate footers across multi-step responses
-- Fix overlapping aggregation patterns where general tokens (e.g. `gemini`) could match multiple groups; make pattern matching token-aware and support regex/glob patterns (BUG-003)
-- Fix `tsconfig.build.json` reference in package.json (BUG-002)
-- Remove unused QuotaTool and stale docs (ISSUE-014)
-- Fix unused imports in logger.ts (ISSUE-013)
-- Fix `test-ag.ts` outdated API signature (ISSUE-012)
-- Add missing `patterns` and `providerId` fields to aggregatedGroups schema (SCHEMA-001)
-- Fix schema mismatch between 'groups' vs 'aggregatedGroups' (ISSUE-015)
-- Fix `showUnaggregated` default causing empty quota display (DOC-002)
+- Skip footer injection for reasoning/subagent steps and incomplete messages, keeping quota footers limited to final responses only
+- Only inject footer when message is complete (`finish === "stop"`) to prevent duplicate injections during streaming
+- Fix footer injection patch payload to include required discriminator fields (`type: "text"`)
+- Ensure ANSI colorization strictly respects `config.color` and is disabled by default
+- Use build configuration (`tsconfig.build.json`) that emits to `dist/`
+- Add missing `predictionShortWindowMinutes` default to `DEFAULT_CONFIG`
+- Correct README to reflect `filterByCurrentModel` default is `false`
+- Fix overlapping aggregation patterns with token-aware matching and regex/glob support
+- Remove unused QuotaTool and stale docs
+- Fix unused imports in logger.ts
+- Fix `test-ag.ts` outdated API signature
+- Add missing `patterns` and `providerId` fields to aggregatedGroups schema
+- Fix schema mismatch between 'groups' vs 'aggregatedGroups'
+- Fix `showUnaggregated` default causing empty quota display
 
 ### Documentation
 
-- Update DESIGN.md architecture diagram to match implementation (DOC-003)
-- Update AGENTS.md with complete project structure (DOC-005)
+- Update DESIGN.md architecture diagram to match implementation
+- Update AGENTS.md with complete project structure
 
 ### Removed
 
-- Removed unused `recentChecks` field in `PluginState`.
+- Removed unused `recentChecks` field in `PluginState`
 
 ## [0.0.1] - 2026-01-13
 

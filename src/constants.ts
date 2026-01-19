@@ -14,4 +14,8 @@ export const SKIP_REASONS = {
     REASONING: "skip:reasoning",
     SUBAGENT: "skip:subagent",
     FOOTER_PRESENT: "skip:footer_present",
+    NON_TEXT_PART: "skip:non_text_part",
+    THINKING: "skip:thinking",
+    STOPPED: "skip:stopped",
+    NOT_COMPLETE: "skip:not_complete",
 };
