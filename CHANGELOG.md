@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.2] - 2026-01-19
 
+### rc3 Improvements
+
+- **Release Candidate 3**: Version bump for final testing before stable 0.0.2 release.
+
 ### rc2 Improvements
 
 - **Configurable Reset Threshold**: Added `historyResetThreshold` option (0-100) to `QuotaConfig` to allow fine-tuning of quota reset detection in `HistoryService`.
