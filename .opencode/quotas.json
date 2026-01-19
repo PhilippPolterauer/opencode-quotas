@@ -1,5 +1,4 @@
 {
-    "$schema": "../schemas/quotas.schema.json",
-    "debug": true,
-    "showUnaggregated": true
+  "$schema": "../schemas/quotas.schema.json",
+  "debug": true
 }

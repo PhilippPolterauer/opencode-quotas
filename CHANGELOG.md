@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.2] - 2026-01-19
 
+### rc4 Improvements
+
+- **Packaging Fix**: Added `schemas/` directory to npm package, which is required for configuration validation.
+- **Build Fix**: Resolved issue where build artifacts were sometimes nested in `dist/src` due to stray files in the project root.
+- **Clean Build**: Updated build script to automatically clear `dist/` before each build to ensure no stale files remain.
+
 ### rc3 Improvements
 
 - **Release Candidate 3**: Version bump for final testing before stable 0.0.2 release.

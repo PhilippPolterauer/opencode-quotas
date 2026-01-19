@@ -1,6 +1,6 @@
 {
     "name": "opencode-quotas",
-    "version": "0.0.2-rc3",
+    "version": "0.0.2-rc4",
     "description": "Opencode quota hub plugin for Antigravity and Codex",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -18,13 +18,14 @@
     "files": [
         "dist",
         "src",
+        "schemas",
         "README.md",
         "LICENSE"
     ],
     "scripts": {
         "opencode-quotas": "bun src/cli.ts",
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+        "build": "rm -rf dist && tsc -p tsconfig.build.json",
+        "typecheck": "tsc --noEmit"
     },
     "engines": {
         "node": ">=20"
