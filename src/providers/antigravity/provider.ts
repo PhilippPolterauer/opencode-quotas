@@ -293,6 +293,13 @@ export function createAntigravityProvider(
                 }
 
                 const label = model.label || model.modelName || "";
+
+                // Filter out internal/miscellaneous quotas (e.g. "chat 12345", "rev123")
+                const lowerLabel = label.toLowerCase();
+                if (/^chat \d+/.test(lowerLabel) || lowerLabel.startsWith("rev")) {
+                    continue;
+                }
+
                 const remainingFraction = model.quotaInfo.remainingFraction;
                 const usedPercent = Math.max(
                     0,

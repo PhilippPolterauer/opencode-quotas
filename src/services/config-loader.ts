@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import { DEFAULT_CONFIG } from "../defaults";
 import { type QuotaConfig } from "../interfaces";
 import { logger } from "../logger";
@@ -34,6 +36,13 @@ export class ConfigLoader {
 
     /**
      * Loads and merges user configuration from disk into the provided config.
+     * Searches for config in multiple locations:
+     * 1. OPENCODE_QUOTAS_CONFIG_PATH environment variable
+     * 2. Project-level: <directory>/.opencode/quotas.json
+     * 3. Global: ~/.opencode/quotas.json
+     * 
+     * Missing config files are silently ignored (expected behavior).
+     * Parse errors are logged as warnings.
      * Returns the updated config.
      */
     static async loadFromDisk(
@@ -42,25 +51,63 @@ export class ConfigLoader {
     ): Promise<QuotaConfig> {
         const result = { ...config };
         
-        try {
-            const envConfigPath = process.env.OPENCODE_QUOTAS_CONFIG_PATH;
-            const configPath = envConfigPath || join(directory, ".opencode", "quotas.json");
-            const rawConfig = await readFile(configPath, "utf-8");
-            const userConfig = JSON.parse(rawConfig);
+        // Build list of config paths to try (in priority order)
+        const configPaths: string[] = [];
+        
+        // 1. Environment variable (highest priority)
+        const envConfigPath = process.env.OPENCODE_QUOTAS_CONFIG_PATH;
+        if (envConfigPath) {
+            configPaths.push(envConfigPath);
+        }
+        
+        // 2. Project-level config
+        configPaths.push(join(directory, ".opencode", "quotas.json"));
+        
+        // 3. Global config in home directory
+        const homeDir = homedir();
+        if (homeDir) {
+            configPaths.push(join(homeDir, ".opencode", "quotas.json"));
+        }
+        
+        // Try each config path until one succeeds
+        for (const configPath of configPaths) {
+            // Skip if file doesn't exist (expected, not an error)
+            if (!existsSync(configPath)) {
+                logger.debug("init:config_not_found", { configPath });
+                continue;
+            }
             
-            ConfigLoader.mergeUserConfig(result, userConfig);
-            
-            logger.debug(
-                "init:config_loaded",
-                { configPath, debug: result.debug },
-            );
-
-        } catch (e) {
-            // Ignore missing config or parse errors
-            logger.error(
-                "init:config_load_failed",
-                { error: e },
-            );
+            try {
+                const rawConfig = await readFile(configPath, "utf-8");
+                const userConfig = JSON.parse(rawConfig);
+                
+                ConfigLoader.mergeUserConfig(result, userConfig);
+                
+                logger.debug(
+                    "init:config_loaded",
+                    { configPath, debug: result.debug },
+                );
+                
+                // Successfully loaded config, stop searching
+                break;
+                
+            } catch (e) {
+                // File exists but failed to parse - this is a real error
+                const isParseError = e instanceof SyntaxError;
+                if (isParseError) {
+                    logger.warn("init:config_parse_failed", { 
+                        configPath, 
+                        error: e instanceof Error ? e.message : String(e) 
+                    });
+                } else {
+                    // Other read errors (permissions, etc.)
+                    logger.warn("init:config_read_failed", { 
+                        configPath, 
+                        error: e instanceof Error ? e.message : String(e) 
+                    });
+                }
+                // Continue to next config path
+            }
         }
 
         // Validate and normalize config values

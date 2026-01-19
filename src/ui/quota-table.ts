@@ -48,7 +48,8 @@ export function renderQuotaTable(
             });
         }
 
-        const name = colorize(validated.providerName, "cyan", useColor);
+        const normalizedName = validated.providerName.replace(/_/g, " ");
+        const name = colorize(normalizedName, "cyan", useColor);
         const status = barParts 
             ? barParts.statusText 
             : (validated.info === "unlimited" ? colorize("OK ", "green", useColor) : colorize("UNK", "gray", useColor));

@@ -135,4 +135,23 @@ describe("Quota Table Rendering", () => {
         expect(rows[2].line).toContain("30m"); // Value stripped
         expect(rows[2].line).not.toContain("(predicted)");
     });
+
+    test("normalizes names by replacing underscores with spaces", () => {
+        const quotas: QuotaData[] = [
+            {
+                id: "1",
+                providerName: "Antigravity_chat_20706",
+                used: 50,
+                limit: 100,
+                unit: "%",
+            },
+        ];
+
+        const rows = renderQuotaTable(quotas, {
+            tableConfig: { columns: ["name"] }
+        });
+
+        expect(rows[2].line).toContain("Antigravity chat 20706");
+        expect(rows[2].line).not.toContain("_");
+    });
 });

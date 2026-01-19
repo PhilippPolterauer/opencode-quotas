@@ -200,4 +200,170 @@ describe("HistoryService", () => {
         const historyB = service.getHistory("quota-b", 48 * oneHour);
         expect(historyB).toHaveLength(0);
     });
+
+    describe("Reset Detection", () => {
+        test("clears history when usage drops significantly (reset detected)", async () => {
+            const now = Date.now();
+            const oneMinute = 60 * 1000;
+            
+            // Simulate history with high usage
+            const mockHistory = {
+                "test-quota": [
+                    { timestamp: now - (5 * oneMinute), used: 60, limit: 100 },
+                    { timestamp: now - (4 * oneMinute), used: 70, limit: 100 },
+                    { timestamp: now - (3 * oneMinute), used: 80, limit: 100 },
+                ]
+            };
+            readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
+
+            const service = new HistoryService("/tmp/history.json");
+            await service.init();
+
+            // Verify initial history is loaded
+            let history = service.getHistory("test-quota", 10 * oneMinute);
+            expect(history).toHaveLength(3);
+            expect(history[2].used).toBe(80);
+
+            // Append a new data point with significantly lower usage (simulating reset)
+            // Drop from 80 to 10 = 70 point drop, which is > 20% of 100 limit
+            await service.append([{
+                id: "test-quota",
+                providerName: "Test",
+                used: 10,
+                limit: 100,
+                unit: "%"
+            }]);
+
+            // History should be cleared and only contain the new point
+            history = service.getHistory("test-quota", 10 * oneMinute);
+            expect(history).toHaveLength(1);
+            expect(history[0].used).toBe(10);
+
+            // Verify reset was logged
+            expect((logger.debug as any).mock.calls.some(
+                (c: any) => c[0] === "history-service:reset_detected" && 
+                           c[1]?.quotaId === "test-quota"
+            )).toBe(true);
+        });
+
+        test("does not clear history for small usage drops (no reset)", async () => {
+            const now = Date.now();
+            const oneMinute = 60 * 1000;
+            
+            // Simulate history with moderate usage
+            const mockHistory = {
+                "test-quota": [
+                    { timestamp: now - (3 * oneMinute), used: 50, limit: 100 },
+                ]
+            };
+            readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
+
+            const service = new HistoryService("/tmp/history.json");
+            await service.init();
+
+            // Append a new data point with slightly lower usage
+            // Drop from 50 to 40 = 10 point drop, which is < 20% of 100 limit
+            await service.append([{
+                id: "test-quota",
+                providerName: "Test",
+                used: 40,
+                limit: 100,
+                unit: "%"
+            }]);
+
+            // History should contain both points
+            const history = service.getHistory("test-quota", 10 * oneMinute);
+            expect(history).toHaveLength(2);
+            expect(history[0].used).toBe(50);
+            expect(history[1].used).toBe(40);
+        });
+
+        test("does not clear history when usage increases", async () => {
+            const now = Date.now();
+            const oneMinute = 60 * 1000;
+            
+            const mockHistory = {
+                "test-quota": [
+                    { timestamp: now - (3 * oneMinute), used: 30, limit: 100 },
+                ]
+            };
+            readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
+
+            const service = new HistoryService("/tmp/history.json");
+            await service.init();
+
+            // Append a new data point with higher usage
+            await service.append([{
+                id: "test-quota",
+                providerName: "Test",
+                used: 50,
+                limit: 100,
+                unit: "%"
+            }]);
+
+            // History should contain both points
+            const history = service.getHistory("test-quota", 10 * oneMinute);
+            expect(history).toHaveLength(2);
+            expect(history[0].used).toBe(30);
+            expect(history[1].used).toBe(50);
+        });
+
+        test("skips reset detection for unlimited quotas", async () => {
+            const now = Date.now();
+            const oneMinute = 60 * 1000;
+            
+            const mockHistory = {
+                "unlimited-quota": [
+                    { timestamp: now - (3 * oneMinute), used: 1000, limit: null },
+                ]
+            };
+            readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
+
+            const service = new HistoryService("/tmp/history.json");
+            await service.init();
+
+            // Append a new data point with lower usage (but unlimited, so no reset detection)
+            await service.append([{
+                id: "unlimited-quota",
+                providerName: "Test",
+                used: 100,
+                limit: null,
+                unit: "credits"
+            }]);
+
+            // History should contain both points since reset detection is skipped
+            const history = service.getHistory("unlimited-quota", 10 * oneMinute);
+            expect(history).toHaveLength(2);
+        });
+
+        test("reset detection works at exact threshold boundary", async () => {
+            const now = Date.now();
+            const oneMinute = 60 * 1000;
+            
+            // Exactly 20% drop: from 50 to 30 = 20 point drop on limit of 100
+            const mockHistory = {
+                "test-quota": [
+                    { timestamp: now - (3 * oneMinute), used: 50, limit: 100 },
+                ]
+            };
+            readFileSpy.mockResolvedValue(JSON.stringify(mockHistory));
+
+            const service = new HistoryService("/tmp/history.json");
+            await service.init();
+
+            // Drop from 50 to 30 = exactly 20% of limit
+            await service.append([{
+                id: "test-quota",
+                providerName: "Test",
+                used: 30,
+                limit: 100,
+                unit: "%"
+            }]);
+
+            // At exactly threshold, reset should be detected
+            const history = service.getHistory("test-quota", 10 * oneMinute);
+            expect(history).toHaveLength(1);
+            expect(history[0].used).toBe(30);
+        });
+    });
 });
