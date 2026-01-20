@@ -13,31 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
 
-## [0.0.2] - 2026-01-19
-
-### rc4 Improvements
-
-- **Packaging Fix**: Added `schemas/` directory to npm package, which is required for configuration validation.
-- **Build Fix**: Resolved issue where build artifacts were sometimes nested in `dist/src` due to stray files in the project root.
-- **Clean Build**: Updated build script to automatically clear `dist/` before each build to ensure no stale files remain.
-
-### rc3 Improvements
-
-- **Release Candidate 3**: Version bump for final testing before stable 0.0.2 release.
-
-### rc2 Improvements
-
-- **Configurable Reset Threshold**: Added `historyResetThreshold` option (0-100) to `QuotaConfig` to allow fine-tuning of quota reset detection in `HistoryService`.
-- **Improved Pattern Matching**: Relaxed token splitting in `QuotaService` to better handle common ID characters like hyphens and underscores.
-- **Consistent Defaults**: Aligned `showUnaggregated` default to `false` across implementation, interface documentation, and JSON schema.
-- **ConfigLoader Refinement**: 
-    - Switched `validateConfig` to a synchronous implementation for better predictability during initialization.
-    - Enhanced deep cloning of `aggregatedGroups` to prevent shared array references between default and user configurations.
-- **Type Safety**: Improved type safety in plugin initialization by replacing `any` with `unknown` for error handling.
-- **Test Suite Enhancements**: Updated all unit test mocks to support the new `IHistoryService` interface, ensuring 100% test pass rate.
+## [0.0.2] - 2026-01-20
 
 ### Added
 
+- `historyResetThreshold` option (0-100) to allow fine-tuning quota reset detection in `HistoryService`
 - End-to-end injection test that runs the OpenCode CLI when `OPENCODE_QUOTAS_E2E=1` is set
 - Integration tests for default configuration behavior to prevent documentation drift
 - Schema validation tests using AJV for configuration validation
@@ -48,36 +28,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Inline footer injection**: Switch from idle-based PATCH injection to inline injection via `experimental.text.complete`, modifying `output.text` directly for immediate, reliable footer display
+- Relax token splitting in `QuotaService` to better handle common ID characters like hyphens and underscores
+- Align `showUnaggregated` default to `false` across implementation, interface documentation, and JSON schema
+- Switch `validateConfig` to synchronous validation for predictable initialization
+- Deep clone `aggregatedGroups` defaults to prevent shared array references between default and user configurations
 - Filter out internal/test Antigravity quotas (e.g. "chat 12345", "rev123") by default to reduce noise
 - Extract `SHORT_WINDOW_FALLBACK_RATIO` constant in prediction engine for better code clarity
 - Comprehensive test suite expanded from 46 to 175 tests with 383 assertions
 - Updated default `progressBar.color` to `false` (was incorrectly documented as `true`)
-- Clarified experimental GitHub Copilot provider status in documentation
 
 ### Fixed
 
+- Include `schemas/` directory in npm package, required for configuration validation
+- Resolve issue where build artifacts were sometimes nested in `dist/src` due to stray files in the project root
+- Updated build script to automatically clear `dist/` before each build to ensure no stale files remain
 - Skip footer injection for reasoning/subagent steps and incomplete messages, keeping quota footers limited to final responses only
 - Only inject footer when message is complete (`finish === "stop"`) to prevent duplicate injections during streaming
 - Fix footer injection patch payload to include required discriminator fields (`type: "text"`)
 - Ensure ANSI colorization strictly respects `config.color` and is disabled by default
 - Use build configuration (`tsconfig.build.json`) that emits to `dist/`
 - Add missing `predictionShortWindowMinutes` default to `DEFAULT_CONFIG`
-- Correct README to reflect `filterByCurrentModel` default is `false`
 - Fix overlapping aggregation patterns with token-aware matching and regex/glob support
-- Remove unused QuotaTool and stale docs
-- Fix unused imports in logger.ts
-- Fix `test-ag.ts` outdated API signature
+- Fix unused imports in `src/logger.ts`
+- Fix `tests/test-ag.ts` outdated API signature
 - Add missing `patterns` and `providerId` fields to aggregatedGroups schema
 - Fix schema mismatch between 'groups' vs 'aggregatedGroups'
 - Fix `showUnaggregated` default causing empty quota display
+- Improved type safety in plugin initialization by replacing `any` with `unknown` for error handling
+- Updated all unit test mocks to support the new `IHistoryService` interface
 
 ### Documentation
 
 - Update DESIGN.md architecture diagram to match implementation
 - Update AGENTS.md with complete project structure
+- Clarified experimental GitHub Copilot provider status in documentation
+- Document `predictionShortWindowMinutes` in README config reference
+- Correct README to reflect `filterByCurrentModel` default is `false`
 
 ### Removed
 
+- Removed unused QuotaTool and stale docs
 - Removed unused `recentChecks` field in `PluginState`
 
 ## [0.0.1] - 2026-01-13
