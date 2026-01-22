@@ -40,12 +40,24 @@ describe("paths utils", () => {
         expect(paths.getConfigDirectory()).toBe("/custom/config/opencode");
     });
 
-    test("returns correct paths on darwin", () => {
+    test("returns correct paths on darwin (same as linux - XDG style)", () => {
         spyOn(os, "platform").mockReturnValue("darwin");
         spyOn(os, "homedir").mockReturnValue("/Users/user");
+        delete process.env.XDG_DATA_HOME;
+        delete process.env.XDG_CONFIG_HOME;
 
-        expect(paths.getDataDirectory()).toBe("/Users/user/Library/Application Support/opencode");
-        expect(paths.getConfigDirectory()).toBe("/Users/user/Library/Application Support/opencode");
+        // OpenCode uses XDG-style paths on macOS, not ~/Library/Application Support/
+        expect(paths.getDataDirectory()).toBe("/Users/user/.local/share/opencode");
+        expect(paths.getConfigDirectory()).toBe("/Users/user/.config/opencode");
+    });
+
+    test("respects XDG environment variables on darwin", () => {
+        spyOn(os, "platform").mockReturnValue("darwin");
+        process.env.XDG_DATA_HOME = "/custom/data";
+        process.env.XDG_CONFIG_HOME = "/custom/config";
+
+        expect(paths.getDataDirectory()).toBe("/custom/data/opencode");
+        expect(paths.getConfigDirectory()).toBe("/custom/config/opencode");
     });
 
     test("file getters return full paths", () => {

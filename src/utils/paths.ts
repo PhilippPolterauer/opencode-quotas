@@ -9,9 +9,9 @@ export function getDataDirectory(): string {
             return process.env.APPDATA
                 ? join(process.env.APPDATA, "opencode")
                 : join(home, "AppData", "Roaming", "opencode");
-        case "darwin":
-            return join(home, "Library", "Application Support", "opencode");
         default:
+            // macOS and Linux both use XDG-style paths
+            // OpenCode stores data in ~/.local/share/opencode/ on all Unix systems
             return process.env.XDG_DATA_HOME
                 ? join(process.env.XDG_DATA_HOME, "opencode")
                 : join(home, ".local", "share", "opencode");
@@ -26,9 +26,9 @@ export function getConfigDirectory(): string {
             return process.env.APPDATA
                 ? join(process.env.APPDATA, "opencode")
                 : join(home, "AppData", "Roaming", "opencode");
-        case "darwin":
-            return join(home, "Library", "Application Support", "opencode");
         default:
+            // macOS and Linux both use XDG-style paths
+            // OpenCode stores config in ~/.config/opencode/ on all Unix systems
             return process.env.XDG_CONFIG_HOME
                 ? join(process.env.XDG_CONFIG_HOME, "opencode")
                 : join(home, ".config", "opencode");

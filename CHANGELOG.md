@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
 
+## [0.0.3-beta] - 2026-01-22
+
+### Fixed
+
+- Fix macOS (Darwin) path handling to use XDG-style paths (`~/.local/share/opencode/`, `~/.config/opencode/`) instead of `~/Library/Application Support/opencode/`, matching OpenCode's actual file locations (fixes #4)
+
 ## [0.0.2] - 2026-01-20
 
 ### Added
