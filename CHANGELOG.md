@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replace platform-specific build scripts with a cross-platform `scripts/build.ts` runner used by `bun run build`
+
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)

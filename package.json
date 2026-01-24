@@ -24,7 +24,7 @@
     ],
     "scripts": {
         "opencode-quotas": "bun src/cli.ts",
-        "build": "rm -rf dist && tsc -p tsconfig.build.json",
+        "build": "bun scripts/build.ts",
         "typecheck": "tsc --noEmit"
     },
     "engines": {
