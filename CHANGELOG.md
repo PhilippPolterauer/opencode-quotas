@@ -7,15 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- Replace platform-specific build scripts with a cross-platform `scripts/build.ts` runner used by `bun run build`
-
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
+
+## [0.0.3-rc0] - 2026-01-24
+
+### Changed
+
+- Replace platform-specific build scripts with a cross-platform `scripts/build.ts` runner used by `bun run build`
 
 ## [0.0.3-beta] - 2026-01-22
 

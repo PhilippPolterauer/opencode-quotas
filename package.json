@@ -1,6 +1,6 @@
 {
     "name": "opencode-quotas",
-    "version": "0.0.3-beta",
+    "version": "0.0.3-rc0",
     "description": "Opencode quota hub plugin for Antigravity and Codex",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
