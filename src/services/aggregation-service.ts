@@ -40,7 +40,8 @@ export class AggregationService implements IAggregationService {
             const time = this.predictionEngine.predictTimeToLimit(
                 q.id, 
                 windowMinutes, 
-                shortWindowMinutes
+                shortWindowMinutes,
+                { windowInfo: q.window }
             );
             if (time < minTime) {
                 minTime = time;

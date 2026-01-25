@@ -197,6 +197,7 @@ export interface IPredictionEngine {
         quotaId: string,
         windowMinutes?: number,
         shortWindowMinutes?: number,
+        context?: { windowInfo?: string }
     ): number;
 }
 

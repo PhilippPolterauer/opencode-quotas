@@ -53,7 +53,8 @@ export class LinearRegressionPredictionEngine implements IPredictionEngine {
     predictTimeToLimit(
         quotaId: string, 
         windowMinutes: number = 60, 
-        shortWindowMinutes?: number
+        shortWindowMinutes?: number,
+        context?: { windowInfo?: string }
     ): number {
         const longWindowMs = windowMinutes * 60 * 1000;
         const shortWindowMin = shortWindowMinutes ?? this.config.predictionShortWindowMinutes;
@@ -73,21 +74,29 @@ export class LinearRegressionPredictionEngine implements IPredictionEngine {
         // Long Slope
         const mLong = this.calculateSlope(history);
 
-        // Short Slope: most recent data in short window or last fallback ratio of points
-        const shortHistory = history.filter(p => p.timestamp > now - shortWindowMs);
-        
-        // Ensure we have enough points in short history, or take the fallback ratio
-        let effectiveShortHistory = shortHistory;
-        if (effectiveShortHistory.length < 2) {
-            const fallbackCount = Math.max(2, Math.ceil(history.length * SHORT_WINDOW_FALLBACK_RATIO));
-            effectiveShortHistory = history.slice(-fallbackCount);
+        let m = mLong;
+
+        // Check if we should use short-term spike detection
+        // If the quota has a long window (Weekly/Monthly), short spikes are less relevant 
+        // and using them causes panic predictions.
+        const isLongTerm = context?.windowInfo && /week|month|\d+d/i.test(context.windowInfo);
+
+        if (!isLongTerm) {
+            // Short Slope: most recent data in short window or last fallback ratio of points
+            const shortHistory = history.filter(p => p.timestamp > now - shortWindowMs);
+            
+            // Ensure we have enough points in short history, or take the fallback ratio
+            let effectiveShortHistory = shortHistory;
+            if (effectiveShortHistory.length < 2) {
+                const fallbackCount = Math.max(2, Math.ceil(history.length * SHORT_WINDOW_FALLBACK_RATIO));
+                effectiveShortHistory = history.slice(-fallbackCount);
+            }
+
+            const mShort = this.calculateSlope(effectiveShortHistory);
+            
+            // Conservative Estimation: use the maximum slope
+            m = Math.max(mLong, mShort);
         }
-
-
-        const mShort = this.calculateSlope(effectiveShortHistory);
-
-        // Conservative Estimation: use the maximum slope
-        const m = Math.max(mLong, mShort);
         
         if (m <= 0) return Infinity;
         if (lastPoint.limit === null || lastPoint.limit <= 0) return Infinity;
@@ -135,7 +144,8 @@ export class NullPredictionEngine implements IPredictionEngine {
     predictTimeToLimit(
         _quotaId: string, 
         _windowMinutes: number = 60, 
-        _shortWindowMinutes?: number
+        _shortWindowMinutes?: number,
+        _context?: { windowInfo?: string }
     ): number {
         return Infinity;
     }

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **ETTL Prediction**: Fix overly pessimistic time-to-limit predictions for long-term quotas (Weekly/Monthly) by ignoring short-term usage spikes in the prediction engine.
+- **Robustness**: Ensure `QuotaService` handles missing authentication files gracefully (verified by new robustness tests), preventing crashes for users with minimal setups.
+
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)

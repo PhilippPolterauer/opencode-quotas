@@ -159,4 +159,57 @@ describe("ETTL Dual-Window & Aggregation Precedence", () => {
         expect(processed[0].used).toBe(80);
         expect(processed[0].predictedReset).toBeUndefined();
     });
+
+    test("Weekly Quota: spike triggers short-term panic", async () => {
+        const now = Date.now();
+        const limit = 10000;
+        const weeklyHistory: HistoryPoint[] = [];
+
+        // 6 days of steady usage (1000/day)
+        const startUsed = 6000;
+        
+        // 55 minutes of slow usage (approx 40 units/hour rate)
+        for (let i = 60; i > 5; i--) {
+            weeklyHistory.push({
+                timestamp: now - i * 60 * 1000,
+                used: startUsed + (60 - i), 
+                limit: limit
+            });
+        }
+        
+        // Spike in last 5 minutes: 500 units used
+        const beforeSpike = weeklyHistory[weeklyHistory.length - 1].used;
+        for (let i = 5; i >= 0; i--) {
+            weeklyHistory.push({
+                timestamp: now - i * 60 * 1000,
+                used: beforeSpike + (5 - i) * 100,
+                limit: limit
+            });
+        }
+
+        historyData["weekly-q"] = weeklyHistory;
+
+        const service = new QuotaService({ showUnaggregated: true });
+        await service.init("/tmp", mockHistoryService);
+
+        const currentData: QuotaData[] = [
+            { 
+                id: "weekly-q", 
+                providerName: "Weekly Quota", 
+                used: weeklyHistory[weeklyHistory.length-1].used, 
+                limit: limit, 
+                unit: "u",
+                window: "Weekly"
+            }
+        ];
+
+        const processed = service.processQuotas(currentData, {});
+        const predicted = processed[0].predictedReset;
+        
+        // Should be significantly larger than the panic prediction (34m)
+        // With regression over 60m dominated by slow usage, it predicts ~17h.
+        expect(predicted).toBeDefined();
+        expect(predicted).not.toMatch(/^\d+m/); 
+        expect(predicted).toMatch(/\d+h/);
+    });
 });
