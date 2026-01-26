@@ -9,14 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **ETTL Prediction**: Fix overly pessimistic time-to-limit predictions for long-term quotas (Weekly/Monthly) by ignoring short-term usage spikes in the prediction engine.
-- **Robustness**: Ensure `QuotaService` handles missing authentication files gracefully (verified by new robustness tests), preventing crashes for users with minimal setups.
 
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
+
+## [0.0.3] - 2026-01-26
+
+### Changed
+
+- Replace platform-specific build scripts with a cross-platform `scripts/build.ts` runner used by `bun run build`
+
+### Fixed
+
+- Fix macOS (Darwin) path handling to use XDG-style paths (`~/.local/share/opencode/`, `~/.config/opencode/`) instead of `~/Library/Application Support/opencode/`, matching OpenCode's actual file locations (fixes #4)
+- **ETTL Prediction**: Fix overly pessimistic time-to-limit predictions for long-term quotas (Weekly/Monthly) by ignoring short-term usage spikes in the prediction engine.
+- **Robustness**: Ensure `QuotaService` handles missing authentication files gracefully (verified by new robustness tests), preventing crashes for users with minimal setups.
 
 ## [0.0.3-rc0] - 2026-01-24
 
