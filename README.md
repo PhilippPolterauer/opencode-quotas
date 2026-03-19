@@ -45,7 +45,14 @@ Add `opencode-quotas` to your OpenCode configuration file (typically `~/.opencod
 
 ## Usage
 
-Once installed and registered, a live quota summary is automatically appended to the final assistant response footer in OpenCode. The plugin waits for the session to go idle before injecting to avoid duplicate footers during multi-step runs.
+Once installed and registered, a live quota summary is automatically appended to the final assistant response footer in OpenCode. In Markdown-based clients such as OpenCode Desktop, the plugin wraps the quota table in a fenced `text` block so the columns stay aligned and readable.
+
+```text
+ST    QUOTA NAME            USED   UTILIZATION            RESET    ETTL
+---   -------------------   ----   --------------------   ------   -----
+OK    Antigravity Flash       0%   ░░░░░░░░░░░░░░░░░░░░   7d 0h    -
+OK    Codex Usage             4%   █░░░░░░░░░░░░░░░░░░░   4h 54m   3h 11m
+```
 
 ### CLI Mode (Optional)
 

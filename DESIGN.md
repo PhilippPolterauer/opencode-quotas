@@ -73,8 +73,8 @@ graph TD
 2. **Caching**: `QuotaCache` polls providers at configurable intervals and stores snapshots
 3. **History**: `QuotaCache` feeds `HistoryService` with usage snapshots for trend analysis
 4. **Processing**: `QuotaService.processQuotas()` enriches quotas with predictions (via `PredictionEngine`), applies aggregation (via `AggregationService`), filters, and sorts
-5. **Queueing**: The `experimental.text.complete` hook records the latest assistant message for the session
-6. **Rendering**: On `session.idle`, the plugin patches the final text part with `renderQuotaTable()` output
+5. **Hook Processing**: The `experimental.text.complete` hook waits for the final assistant text part and guards against duplicate injection
+6. **Rendering**: The plugin renders `renderQuotaTable()` output and wraps it in a fenced Markdown `text` block so chat clients preserve alignment
 
 ---
 
@@ -203,6 +203,10 @@ The prediction system uses a **Dual-Window** linear regression approach:
 ### Configurable Columns
 
 Available columns: `status`, `name`, `bar`, `percent`, `value`, `reset`, `window`, `info`, `ettl`
+
+### Markdown Footer Rendering
+
+The plugin injects the footer as Markdown, with a bold title and a fenced `text` block around the quota table. This keeps column spacing intact in desktop and web clients that would otherwise collapse plain newlines and spaces.
 
 ---
 

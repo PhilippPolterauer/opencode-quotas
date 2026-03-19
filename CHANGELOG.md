@@ -7,14 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-
 ### Planned
 
 - [ ] Local Provider pattern for `/quotas` command (pending platform support)
 - [ ] GitHub Copilot detailed usage (pending API availability)
 - [ ] Web-based configuration UI
+
+## [0.0.4-beta] - 2026-03-19
+
+### Fixed
+
+- Wrap injected quota footers in a fenced Markdown `text` block and switch the default title away from underscore italics so OpenCode Desktop preserves alignment and renders the footer cleanly
+
+### Documentation
+
+- Document the new Markdown footer rendering behavior in `README.md` and `DESIGN.md`
 
 ## [0.0.3] - 2026-01-26
 

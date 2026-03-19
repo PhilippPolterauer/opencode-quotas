@@ -3,6 +3,7 @@ import { type AssistantMessage, type UserMessage } from "@opencode-ai/sdk";
 import { QuotaService } from "./services/quota-service";
 import { HistoryService } from "./services/history-service";
 import { renderQuotaTable } from "./ui/quota-table";
+import { renderQuotaFooter } from "./ui/footer";
 import { type QuotaData } from "./interfaces";
 import { QuotaCache } from "./quota-cache";
 import {
@@ -179,15 +180,14 @@ export const QuotaHubPlugin: Plugin = async ({
         }).map((l) => l.line);
 
         const showMode = config.progressBar?.show ?? "used";
-        const modeLabel = showMode === "available" ? "(Remaining)" : "(Used)";
         const showTitle = config.showFooterTitle !== false;
-        const titleText = showTitle
-            ? `${PLUGIN_FOOTER_SIGNATURE} ${modeLabel}_\n`
-            : "";
 
         return {
-            text: "\n\n" + titleText + lines.join("\n"),
-            lineCount: lines.length,
+            text: renderQuotaFooter(lines, {
+                mode: showMode,
+                showTitle,
+            }),
+            lineCount: lines.length + (showTitle ? 1 : 0),
         };
     };
 
